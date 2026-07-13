@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "additionalDirectories": [
+        "/home/nwood/non-soc/personal/hof",
+        "/home/nwood/non-soc/personal/curia-augur"
+    ],
+    "allow": [
+      "Read(**)"
+    ]
+  }
+}
