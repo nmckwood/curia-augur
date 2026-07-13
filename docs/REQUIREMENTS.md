@@ -12,6 +12,7 @@
 11. The system will compare data as follows:
 - deprivation data between 2015 and 2019 how it impacted the local election results in 2022 with 2018 as the bench mark for change.
 - deprivation data between 2019 and 2025 how it impacted the local election results in 2026 with 2022 as the bench mark for change.
+12. All code will be tested locally so a sensible directory structure must be used that allows imports such that in the tools dir we can have a test_all.py file that runs the end to end system importing each relevant python file and running them sequentially as if in AWS.
 
 # Data Ingestion Pipeline
 1. There are 3 key sets of data
@@ -120,6 +121,4 @@
 ```
 then calculate the change_factor and populate the output json `deprivation-election-data-<composite key of input data>.json` as per the schema.
 11. To join local election data with deprivation data the Council field in the local election data should be joined with 'Local Authority District name <some date pattern matching must be used>'.
-
-
-
+12. The data ingestion pipeline when it has created 
