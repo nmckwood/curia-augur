@@ -62,3 +62,9 @@
 [ACTION] predict.py: per-constituency per-year prediction + univariate per-index held-out accuracy + majority-class baseline; schema fields added
 [RESULT] KEY FINDING: pair1 baseline=per-year=0.798 (indices dont beat base rate); pair2 baseline 0.575, per-year 0.483, best single index Living Environment 0.598 (+2pp). tests 9/9, e2e PASS
 [ACTION] Frontend: model per-year fields; MapColorMode.predictedPerYear; perYear flag on scatter/pie; most_predictive_indices.dart; per_year_screen.dart (new page); HomeScreen nav button
+[PROMPT] create a detailed README.md
+[ACTION] Rewrote README.md: architecture, 5 pipeline stages, repo layout, data, local/AWS parity, run flags, UI (both pages), deploy, schemas, methodology, findings table, testing
+[PROMPT] add a readme for each microservice
+[ACTION] Added README.md to apps/{data_ingestion,ml_pipeline,prediction,files_api}: type/trigger/handler/core module, IO, env vars, IAM, local run
+[PROMPT] add a readme to the UI
+[ACTION] Replaced default flutter README with detailed frontend/curia_augur_ui/README.md: layout, both pages, dart-define flags, local+cloud run, build/deploy, assets
