@@ -1,0 +1,29 @@
+name: curia_augur_ui
+description: Curia Augur - UK local election deprivation clustering explorer.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+  flutter: '>=3.32.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.0
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+  amazon_cognito_identity_dart_2: ^3.6.3
+  flutter_secure_storage: ^9.2.2
+  fl_chart: ^0.69.0
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  # Populated by tools/prepare_local_ui_assets.py for local mode
+  # (--dart-define=LOCAL_FILENAME=...). Empty in a normal cloud build.
+  assets:
+    - assets/analysis/
+    - assets/geo/

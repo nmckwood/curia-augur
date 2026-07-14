@@ -8,7 +8,7 @@
 7. The system will have a data ingestion layer which will be triggered once via the AWS console.
 8. The users will call outputs from the data ingestion layer.
 9. Any tools created such as scripts used for uploading data, pre processing data etc must be placed into `/home/nwood/non-soc/personal/curia-augur/tools`.
-10. The app must use the domain howfhowfhowf as it is alreayd registered, its details can be found in the reference howf project.
+10. The app must use the domain howfhowfhowf as it is alreayd registered, its details can be found in the reference howf project we must add curia-augur to make it unique.
 11. The system will compare data as follows:
 - deprivation data between 2015 and 2019 how it impacted the local election results in 2022 with 2018 as the bench mark for change.
 - deprivation data between 2019 and 2025 how it impacted the local election results in 2026 with 2022 as the bench mark for change.
@@ -121,4 +121,157 @@
 ```
 then calculate the change_factor and populate the output json `deprivation-election-data-<composite key of input data>.json` as per the schema.
 11. To join local election data with deprivation data the Council field in the local election data should be joined with 'Local Authority District name <some date pattern matching must be used>'.
-12. The data ingestion pipeline when it has created 
+12. The data ingestion pipeline when it has created the output file should place it into the bucket with prefix `output`.
+
+# Machine Learning Pipeline
+1. There must be a function which subscribes to an s3 event on the data ingestion pipeline bucket `/output` key.
+2. When a file arrives the lambda should start.
+3. The lambda will ingest the data.
+4. For each entry in the input json:
+- consolodate to use the decile delta only.
+- normalize the z score.
+- run k-means for 2-7, compute the silhouette score and pick the best k value.
+- fit KMeans o the 8 normalized features.
+- compute the mean change_factor per cluster.
+- run Kruskal-Wallis to check the differences are significant.
+- identify clusters with the largest change factor
+5. find which deprivation indices define the high change cluster and compare the mean value in the high change cluster against the other clusters (those with the largest deviation are those that charaterize the high change group).
+6. the function should output this
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Deprivation-Election KMeans Analysis Output",
+  "type": "object",
+  "properties": {
+    "meta": {
+      "type": "object",
+      "properties": {
+        "k": { "type": "integer", "description": "Number of clusters used" },
+        "k_selection_method": { "type": "string", "enum": ["elbow", "silhouette", "manual"] },
+        "features_used": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "The 8 deprivation decile fields used as KMeans input, in feature order"
+        },
+        "normalization": { "type": "string", "enum": ["z-score", "min-max", "none"] },
+        "n_constituencies": { "type": "integer" },
+        "generated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["k", "features_used", "n_constituencies"],
+      "additionalProperties": false
+    },
+
+    "clusters": {
+      "type": "array",
+      "description": "One entry per cluster, with summary stats for the UI",
+      "items": {
+        "type": "object",
+        "properties": {
+          "cluster_id": { "type": "integer" },
+          "size": { "type": "integer", "description": "Number of constituencies in this cluster" },
+          "mean_change_factor": { "type": "number" },
+          "median_change_factor": { "type": "number" },
+          "is_high_change_cluster": { "type": "boolean" },
+          "centroid": {
+            "type": "object",
+            "description": "Mean normalized value per feature for this cluster",
+            "additionalProperties": { "type": "number" }
+          }
+        },
+        "required": ["cluster_id", "size", "mean_change_factor", "centroid"],
+        "additionalProperties": false
+      }
+    },
+
+    "significance_test": {
+      "type": "object",
+      "description": "Kruskal-Wallis test result across clusters' change_factor",
+      "properties": {
+        "test": { "type": "string", "enum": ["kruskal-wallis"] },
+        "statistic": { "type": "number" },
+        "p_value": { "type": "number" },
+        "significant": { "type": "boolean", "description": "p_value < chosen alpha (e.g. 0.05)" }
+      },
+      "required": ["statistic", "p_value", "significant"],
+      "additionalProperties": false
+    },
+
+    "feature_importance": {
+      "type": "array",
+      "description": "Ranked deprivation indices by how strongly they characterize the high-change cluster",
+      "items": {
+        "type": "object",
+        "properties": {
+          "feature": { "type": "string" },
+          "high_change_cluster_mean": { "type": "number" },
+          "other_clusters_mean": { "type": "number" },
+          "deviation_score": { "type": "number", "description": "e.g. |high_change_mean - other_mean|, or z-score of the deviation" },
+          "rank": { "type": "integer" }
+        },
+        "required": ["feature", "deviation_score", "rank"],
+        "additionalProperties": false
+      }
+    },
+
+    "constituencies": {
+      "type": "array",
+      "description": "Per-constituency results for drilldown tables/maps in the UI",
+      "items": {
+        "type": "object",
+        "properties": {
+          "Local Authority District name": { "type": "string" },
+          "council": { "type": "string" },
+          "cluster_id": { "type": "integer" },
+          "change_factor": { "type": "integer" },
+          "deprivation_deciles": {
+            "type": "object",
+            "description": "Raw (non-normalized) decile values used as input, for display",
+            "additionalProperties": { "type": "integer" }
+          }
+        },
+        "required": ["Local Authority District name", "cluster_id", "change_factor"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["meta", "clusters", "feature_importance", "constituencies"],
+  "additionalProperties": false
+}
+```
+7. The machine learning pipeline will output this to an S3 bucket.
+
+# APIs
+1. There must be a single GET API which returns a list of pre signed URLs for all of the available output data from the machine learning pipeline, it has response
+```
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pre-signed File URLs",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "filename": {
+        "type": "string"
+      },
+      "pre_signed_url": {
+        "type": "string",
+        "format": "uri"
+      }
+    },
+    "required": ["filename", "pre_signed_url"],
+    "additionalProperties": false
+  },
+  "minItems": 1
+}
+```
+2. the API must return appropriate response codes.
+
+# User Interface
+1. must have a banner with the app name
+2. must have a drop down box where the user selects from the file names available in the GET API.
+3. must render the local authority data using Open Street Map.
+4. the map should show the geospatial data closest to the chosen file date EG 2022 maps to 2019 and 2025 maps to 2026.
+5. the local authority maps should be rendered on the polygon.
+6. the local authority maps should be coloured green (best) to red (worst) based on drop downs and change factors defined in the constituencies array.
+7. there should be a filterable and collapsable table which shows the remaining data in the json as per point 6 when things are selected.
+8. users must see no data until they are authenticated.

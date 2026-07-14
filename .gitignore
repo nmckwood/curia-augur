@@ -1,2 +1,10 @@
 *.venv*
 *geospatial_data*
+__pycache__/
+*.pyc
+local_output/
+cdk.out/
+frontend/curia_augur_ui/build/
+frontend/curia_augur_ui/.dart_tool/
+frontend/curia_augur_ui/assets/analysis/*.json
+frontend/curia_augur_ui/assets/geo/*.geojson
