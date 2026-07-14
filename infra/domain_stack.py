@@ -1,8 +1,8 @@
-"""Domain stack: reuse the already-registered howfhowfhowf.com hosted zone and mint
-ACM certs for the curia-augur subdomains.
+"""Domain stack: reuse an existing (caller-supplied) Route53 hosted zone and mint ACM
+certs for the curia-augur subdomains.
 
-The hosted zone is looked up (NOT created) so we never create a second zone for the
-existing domain. Certs cover ``<sub>.<root>`` (web) and ``api.<sub>.<root>`` (API). For
+The hosted zone is looked up (NOT created) so we never create a second zone for a domain
+you already own. Certs cover ``<sub>.<root>`` (web) and ``api.<sub>.<root>`` (API). For
 CloudFront the web cert must be in us-east-1, so deploy this stack in us-east-1.
 """
 
@@ -19,8 +19,8 @@ class DomainStack(Stack):
     def __init__(self, scope, construct_id, root_domain, subdomain, **kwargs):
         super().__init__(scope, construct_id, **kwargs)
 
-        app_domain = f"{subdomain}.{root_domain}"          # curia-augur.howfhowfhowf.com
-        api_domain = f"api.{subdomain}.{root_domain}"      # api.curia-augur.howfhowfhowf.com
+        app_domain = f"{subdomain}.{root_domain}"          # e.g. curia-augur.example.com
+        api_domain = f"api.{subdomain}.{root_domain}"      # e.g. api.curia-augur.example.com
 
         self.hosted_zone = route53.HostedZone.from_lookup(
             self, "HostedZone", domain_name=root_domain

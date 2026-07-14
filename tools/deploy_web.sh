@@ -4,7 +4,7 @@
 #
 # Usage:
 #   WEB_BUCKET=curia-augur-web-<acct> \
-#   API_BASE_URL=https://api.curia-augur.howfhowfhowf.com \
+#   API_BASE_URL=https://api.curia-augur.<your-domain> \
 #   COGNITO_USER_POOL_ID=... COGNITO_CLIENT_ID=... \
 #   DISTRIBUTION_ID=... \
 #   tools/deploy_web.sh

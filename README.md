@@ -124,7 +124,7 @@ curia-augur/
 ├── requirements.txt             # CDK deps
 ├── requirements-dev.txt         # pipeline + local deps (pandas, sklearn, scipy, rapidfuzz, …)
 ├── infra/
-│   ├── domain_stack.py          # looks up existing howfhowfhowf.com zone; ACM certs
+│   ├── domain_stack.py          # looks up your existing hosted zone; ACM certs
 │   └── resources_stack.py       # buckets, container lambdas, S3 events, Cognito, API GW, CloudFront
 ├── src/curia_core/              # PURE functional core (imported by lambdas AND tools)
 │   ├── common/{io,schemas}.py   # CURIA_LOCAL IO switch + jsonschema; field constants + schemas
@@ -245,19 +245,23 @@ See `docs/FLUTTER_WSL_SETUP.md` for WSL specifics.
 
 ## Deploying to AWS
 
-Deploy in **us-east-1** (the web ACM certificate must be there for CloudFront). The
-`howfhowfhowf.com` hosted zone is **looked up, not recreated**; the app serves at
-`curia-augur.howfhowfhowf.com`, API at `api.curia-augur.howfhowfhowf.com`.
+Deploy in **us-east-1** (the web ACM certificate must be there for CloudFront). You supply
+your own registered domain via the **required** `root_domain` context arg — it must be an
+existing Route53 hosted zone you own (it is **looked up, not created**). With
+`root_domain=example.com`, the app serves at `curia-augur.example.com` and the API at
+`api.curia-augur.example.com` (override the subdomain with `--context subdomain=...`).
 
 ```bash
 pip install -r requirements.txt
-cdk deploy --all --context account=<acct> --context region=us-east-1
+cdk deploy --all \
+  --context account=<acct> --context region=us-east-1 \
+  --context root_domain=<your-domain>
 
 python tools/upload_data_to_s3.py --bucket curia-augur-input-<acct>
 # Invoke the data_ingestion lambda once per comparison pair (payloads in tools/run_ingestion_local.py).
 # ML fires on the output/ write; prediction fires on the analysis/ writes (loop-guarded).
 
-WEB_BUCKET=... API_BASE_URL=https://api.curia-augur.howfhowfhowf.com \
+WEB_BUCKET=... API_BASE_URL=https://api.curia-augur.<your-domain> \
   COGNITO_USER_POOL_ID=... COGNITO_CLIENT_ID=... DISTRIBUTION_ID=... \
   tools/deploy_web.sh
 ```
@@ -281,6 +285,22 @@ Canonical schemas live in `src/curia_core/common/schemas.py`; every output is va
 `jsonschema` before it is written.
 
 ---
+
+## Data sources & attribution
+
+This repository redistributes third-party open datasets under `data/`. Each is used under its
+respective licence; please retain this attribution if you reuse the data.
+
+| Dataset | Source | Licence |
+|---------|--------|---------|
+| English Indices of Deprivation (IoD 2015 / 2019) | Ministry of Housing, Communities & Local Government (now DLUHC), via GOV.UK | [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/) |
+| Local councillor / election data | [OpenCouncilData](https://opencouncildata.co.uk/) | See the OpenCouncilData site for its terms (attribution required) |
+| Local Authority District boundaries (GeoJSON, 2022 / 2025) | Office for National Statistics — Open Geography Portal | [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/); contains OS data © Crown copyright and database right |
+| Basemap tiles | [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors | ODbL |
+
+> Councillor names in the election data are already public record. Boundary GeoJSON is
+> git-ignored (too large); download it from the ONS Open Geography Portal. Verify the current
+> licence terms at each source before redistributing — they may change.
 
 ## Methodology & key decisions
 
@@ -332,6 +352,12 @@ CURIA_LOCAL=true ./.venv/bin/python tools/test_all.py
 ```
 
 ---
+
+## License
+
+Source code is released under the [MIT License](LICENSE). The bundled datasets under `data/`
+are **not** covered by MIT — they remain under their original licences; see
+[Data sources & attribution](#data-sources--attribution).
 
 ## Conventions
 

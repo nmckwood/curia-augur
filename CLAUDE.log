@@ -68,3 +68,7 @@
 [ACTION] Added README.md to apps/{data_ingestion,ml_pipeline,prediction,files_api}: type/trigger/handler/core module, IO, env vars, IAM, local run
 [PROMPT] add a readme to the UI
 [ACTION] Replaced default flutter README with detailed frontend/curia_augur_ui/README.md: layout, both pages, dart-define flags, local+cloud run, build/deploy, assets
+[PROMPT] add LICENSE (MIT), add Data sources & attribution to README, make domain a required context arg
+[ACTION] app.py: root_domain now required context (exits if missing), no default; genericised domain examples in domain_stack/README/UI README/FLUTTER_WSL/config.dart/deploy_web to <your-domain>
+[ACTION] Added MIT LICENSE (2026 neils wood); README: Data sources & attribution (IoD/OGL, OpenCouncilData, ONS boundaries/OGL, OSM/ODbL) + License section
+[RESULT] py_compile OK; real domain remains only in authored REQUIREMENTS.md spec + historical CLAUDE.log

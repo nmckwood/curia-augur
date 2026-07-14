@@ -58,7 +58,7 @@ Run against a deployed backend (fill in the CDK stack outputs):
 
 ```bash
 flutter run -d chrome \
-  --dart-define=API_BASE_URL=https://api.curia-augur.howfhowfhowf.com \
+  --dart-define=API_BASE_URL=https://api.curia-augur.<your-domain> \
   --dart-define=COGNITO_USER_POOL_ID=us-east-1_xxxxxxx \
   --dart-define=COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
 ```

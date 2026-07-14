@@ -77,7 +77,7 @@ flutter run -d web-server --web-port=8080 --dart-define=LOCAL=true
 ### Against a deployed backend
 ```bash
 flutter run -d web-server --web-port=8080 \
-  --dart-define=API_BASE_URL=https://api.curia-augur.howfhowfhowf.com \
+  --dart-define=API_BASE_URL=https://api.curia-augur.<your-domain> \
   --dart-define=COGNITO_USER_POOL_ID=us-east-1_xxxxx \
   --dart-define=COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
@@ -91,7 +91,7 @@ flutter build web --dart-define=API_BASE_URL=... --dart-define=COGNITO_USER_POOL
 ```
 `tools/deploy_web.sh` builds, syncs `build/web/` to the web S3 bucket, uploads simplified
 GeoJSON under `/geo`, and invalidates CloudFront. The app is served from CloudFront + a private
-S3 bucket at `curia-augur.howfhowfhowf.com`.
+S3 bucket at `curia-augur.<your-domain>`.
 
 ## Assets & GeoJSON
 Local mode reads bundled `assets/analysis/*.json` (enumerated at runtime via the asset

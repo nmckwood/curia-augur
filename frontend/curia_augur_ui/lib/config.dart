@@ -1,7 +1,6 @@
-/// Compile-time configuration, supplied via `--dart-define` at build time
-/// (mirrors the hof reference app). Example:
+/// Compile-time configuration, supplied via `--dart-define` at build time. Example:
 ///   flutter build web \
-///     --dart-define=API_BASE_URL=https://api.curia-augur.howfhowfhowf.com \
+///     --dart-define=API_BASE_URL=https://api.curia-augur.<your-domain> \
 ///     --dart-define=COGNITO_USER_POOL_ID=us-east-1_xxx \
 ///     --dart-define=COGNITO_CLIENT_ID=xxxx
 class Config {
