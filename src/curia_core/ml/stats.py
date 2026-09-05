@@ -1,8 +1,9 @@
 """Cluster statistics: per-cluster change_factor, Kruskal-Wallis, feature importance.
 
-Implements REQ ML-4 (mean change_factor per cluster, Kruskal-Wallis significance) and
+Implements REQ ML-4 (mean change_factor per cluster, Kruskal-Wallis significance),
 REQ ML-5 (which deprivation indices characterize the high-change cluster - the features
-with the largest deviation of the high-change cluster mean from the other clusters).
+with the largest deviation of the high-change cluster mean from the other clusters) and
+REQUIREMENTS_4 (score each cluster's implied prediction against the actual outcome).
 """
 
 import numpy as np
@@ -44,6 +45,55 @@ def mark_high_change_cluster(summaries):
     for summary in summaries:
         summary["is_high_change_cluster"] = summary["cluster_id"] == high["cluster_id"]
     return high["cluster_id"]
+
+
+def cluster_predictions(labels, high_change_cluster_id):
+    """The change_factor_cluster of every row: 1 in the high-change cluster, else 0.
+
+    This is the clustering's own prediction - k-means only sees deprivation data, so the
+    single high-change cluster is the group it says should flip (REQUIREMENTS_4 ML-1).
+    """
+    return [1 if int(label) == high_change_cluster_id else 0 for label in labels]
+
+
+def score_clusters(summaries, labels, change_factors, high_change_cluster_id):
+    """Score each cluster's prediction against the actual outcome and rank by accuracy.
+
+    A cluster predicts 1 for all its members if it is the high-change cluster and 0
+    otherwise, so its accuracy is the percentage of its councils whose actual
+    change_factor matched that call. Mutates ``summaries`` in place and returns the
+    overall (all-council) accuracy block (REQUIREMENTS_4 General).
+    """
+    predictions = cluster_predictions(labels, high_change_cluster_id)
+    actuals = [int(round(float(c))) for c in change_factors]
+
+    for summary in summaries:
+        cluster_id = summary["cluster_id"]
+        pairs = [
+            (p, a)
+            for label, p, a in zip(labels, predictions, actuals)
+            if int(label) == cluster_id
+        ]
+        correct = sum(1 for p, a in pairs if p == a)
+        summary["predicted_change_factor"] = 1 if cluster_id == high_change_cluster_id else 0
+        summary["n_correct"] = int(correct)
+        summary["accuracy"] = float(correct / len(pairs)) if pairs else 0.0
+
+    # Rank 1 = most accurate cluster. Ties broken by the larger cluster first, so a rank
+    # is never awarded to a two-council cluster over a two-hundred-council one.
+    for rank, summary in enumerate(
+        sorted(summaries, key=lambda s: (-s["accuracy"], -s["size"], s["cluster_id"])),
+        start=1,
+    ):
+        summary["accuracy_rank"] = rank
+
+    total = len(actuals)
+    overall = sum(1 for p, a in zip(predictions, actuals) if p == a)
+    return predictions, {
+        "accuracy": float(overall / total) if total else 0.0,
+        "n_correct": int(overall),
+        "n_total": int(total),
+    }
 
 
 def significance_test(labels, change_factors):

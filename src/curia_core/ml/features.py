@@ -17,6 +17,10 @@ def build_feature_matrix(entries):
     rows = []
     for entry in entries:
         deprivation = entry["deprivation"]
+        # for each LAD for each deprivation delta and decile delta key/value
+        # in the order of the machine learning feature keys (the indices we care 
+        # about) transform into a feature vector EG Hammersmith&Fulham [15.1, 10.2 ...]
+        # where the values are the transformed data
         vector = [float(deprivation[k]) for k in ML_FEATURE_KEYS]
         matrix.append(vector)
         results = entry["local_election_results"]
@@ -33,12 +37,40 @@ def build_feature_matrix(entries):
     return np.asarray(matrix, dtype=float), rows
 
 
+# A feature whose modal value covers at least this fraction of rows carries no usable
+# spread. Eight of the sixteen deltas are decile deltas that almost all round to zero -
+# the Income decile delta has exactly ONE non-zero council out of 312 - and z-scoring such
+# a column turns that single row into a |z| ~ 17 outlier that then dominates every KMeans
+# distance. Treat those columns as degenerate instead of amplifying them.
+NEAR_CONSTANT_MODAL_FRACTION = 0.95
+
+
+def degenerate_feature_mask(matrix):
+    """Boolean mask of columns with no usable variation (constant or near-constant)."""
+    n_rows = matrix.shape[0]
+    if n_rows == 0:
+        return np.zeros(matrix.shape[1], dtype=bool)
+    modal_fraction = np.array(
+        [np.unique(col, return_counts=True)[1].max() / n_rows for col in matrix.T]
+    )
+    return (matrix.std(axis=0) == 0) | (modal_fraction >= NEAR_CONSTANT_MODAL_FRACTION)
+
+
 def zscore_normalize(matrix):
-    """Z-score each column; zero-variance columns become all zeros (avoid div-by-0)."""
+    """Z-score each column; degenerate columns become all zeros.
+
+    Zero-variance columns would divide by zero; near-constant columns would survive that
+    guard but blow their handful of non-modal rows up into extreme z-scores. Both are
+    zeroed, which keeps the column (and so the feature order, centroid keys and
+    feature_importance block) while removing its influence on distance.
+    """
+    degenerate = degenerate_feature_mask(matrix)
     mean = matrix.mean(axis=0)
     std = matrix.std(axis=0)
-    safe_std = np.where(std == 0, 1.0, std)
-    return (matrix - mean) / safe_std
+    safe_std = np.where(degenerate, 1.0, std)
+    normalized = (matrix - mean) / safe_std
+    normalized[:, degenerate] = 0.0  # explicit: (x - mean) is non-zero when std > 0
+    return normalized
 
 
 def pca_2d(normalized):

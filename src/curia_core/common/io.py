@@ -1,4 +1,5 @@
-"""Local-vs-S3 IO abstraction plus schema validation.
+"""
+Local-vs-S3 IO abstraction plus schema validation.
 
 Behaviour is switched by the ``CURIA_LOCAL`` environment flag (REQ: "there must be an
 env flag which is true for when running locally which reads files locally rather than
@@ -8,6 +9,8 @@ need no AWS credentials or the boto3 package.
 
 import json
 import os
+
+from jsonschema import Draft202012Validator
 
 # Repo root is three levels up from this file: src/curia_core/common/io.py -> repo root.
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
@@ -44,7 +47,8 @@ def _s3():
 
 
 def resolve_input_path(filename):
-    """Return a local filesystem path for an input data file.
+    """
+    Return a local filesystem path for an input data file.
 
     Local mode: search recursively under the data dir for the given filename.
     AWS mode: download s3://INPUT_BUCKET/<filename> to /tmp and return that path.
@@ -62,7 +66,8 @@ def resolve_input_path(filename):
 
 
 def write_output_text(key, text):
-    """Write text output to the output location under prefix ``output/``.
+    """
+    Write text output to the output location under prefix ``output/``.
 
     Local mode: writes to the local output dir. AWS mode: puts to OUTPUT_BUCKET.
     ``key`` should already include any prefix (e.g. ``output/foo.json``).
@@ -78,7 +83,8 @@ def write_output_text(key, text):
 
 
 def list_output_keys(prefix):
-    """List output object keys under ``prefix`` (e.g. 'analysis/').
+    """
+    List output object keys under ``prefix`` (e.g. 'analysis/').
 
     Local mode: walk the local output dir and return keys relative to it. AWS mode:
     paginate ``list_objects_v2`` on OUTPUT_BUCKET.
@@ -114,11 +120,11 @@ def write_output_json(key, obj):
 
 
 def validation_errors(instance, schema):
-    """Return a list of human-readable validation error strings (never raises).
+    """
+    Return a list of human-readable validation error strings (never raises).
 
     Callers log these rather than aborting, per REQ (invalid entries are logged).
     """
-    from jsonschema import Draft202012Validator
 
     validator = Draft202012Validator(schema)
     errors = []

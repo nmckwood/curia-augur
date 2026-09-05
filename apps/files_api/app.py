@@ -34,9 +34,12 @@ def _is_authenticated(event):
 
 
 def lambda_handler(event, context):
+    """
+    authenticate a user and return a pre signed url to the browser to then fetch the data
+    """
     if not _is_authenticated(event):
         return _response(401, {"message": "unauthorized"})
-
+    
     try:
         paginator = s3.get_paginator("list_objects_v2")
         items = []

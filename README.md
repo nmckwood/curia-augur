@@ -93,7 +93,9 @@ Input event (REQUIREMENTS §Data-Ingestion-3):
   for a 2-component projection used by the cluster scatter.
 - **cluster.py** — KMeans for `k` in `K_RANGE` (currently 2..14), pick best `k` by silhouette.
 - **stats.py** — per-cluster mean/median `change_factor`; Kruskal-Wallis across clusters; flags
-  the high-change cluster; ranks feature importance by |high-change mean − others mean|.
+  the high-change cluster; ranks feature importance by |high-change mean − others mean|; scores
+  each cluster's implied prediction (`change_factor_cluster`) against the actual outcome and
+  ranks the clusters by accuracy (REQUIREMENTS_4).
 - **pipeline.py** — assembles + validates `analysis/analysis-<key>.json`.
 
 ### 3. Cross-analysis prediction (`src/curia_core/ml/predict.py`) — triggered by S3 write to `analysis/`
@@ -106,7 +108,10 @@ held-out test split**, so there is no feature-selection leakage.
 - **Per-year best-indices model**: each year's own top-K indices (ranked by |standardized
   logistic coefficient| on train) → `change_factor_per_year_key_indices`.
 - **Per-index univariate accuracy** + **majority-class baseline** so predictiveness is judged
-  against the "predict no change" bar.
+  against the "predict no change" bar. The baseline is reported as
+  `meta.prediction.baseline` — `{majority_class, holdout_accuracy, all_accuracy,
+  n_correct_all, n_total_all}` — the "if you did no ML at all and just guessed the most
+  common `change_factor`" number the UI shows beside every accuracy pie.
 
 ### 4. Files API (`apps/files_api/`)
 Cognito-secured `GET /files` → array of `{filename, pre_signed_url}` for every analysis output.
@@ -274,12 +279,17 @@ one-week debug log retention; no always-on compute.
 ## Output schemas
 
 - **Ingestion** `deprivation-election-data-<key>.json` — array of
-  `{ "Local Authority District name", "deprivation": {16 "... delta" ints},
+  `{ "Local Authority District name", "deprivation": {8 rank "... delta" percentile-point
+  floats + 8 decile "... delta" ints},
   "local_election_results": { "council", "change_factor" (0/1), "<party>": seatDelta } }`.
 - **Analysis** `analysis-<key>.json` — `meta` (k, features_used, `key_indices`, `prediction`
   {held-out/baseline/per-year accuracies, `per_year_index_details`}), `clusters`,
   `significance_test`, `feature_importance`, and `constituencies` (with `pca_x/pca_y`,
-  `change_factor`, `change_factor_deprivation_key_indices`, `change_factor_per_year_key_indices`).
+  `change_factor`, `change_factor_cluster`, `change_factor_deprivation_key_indices`,
+  `change_factor_per_year_key_indices`). `meta.cluster_accuracy` holds the all-council accuracy
+  of `change_factor_cluster`; `meta.degenerate_features` lists features excluded from the
+  distance metric for lack of spread; each entry in `clusters` carries `predicted_change_factor`,
+  `n_correct`, `accuracy` and `accuracy_rank`.
 
 Canonical schemas live in `src/curia_core/common/schemas.py`; every output is validated with
 `jsonschema` before it is written.
@@ -309,6 +319,18 @@ respective licence; please retain this attribution if you reuse the data.
 - **change_factor**: binary majority-party flip (REQUIREMENTS_2), superseding the earlier
   "seats changed hands %".
 - **LSOA→LAD**: group by LAD name, mean-aggregate, then year delta.
+- **Rank re-basing**: IoD re-ranks every edition (32,844 LSOAs in 2015/2019, **33,755** in
+  2025), so raw ranks are not comparable across editions. Ranks are converted to
+  within-edition national percentiles before differencing; a rank delta is a change in
+  **percentile points**, not in raw rank position.
+- **Abolished councils**: councils present in the benchmark year but absent from the target
+  year (the Northamptonshire / Buckinghamshire / Cumbria / North Yorkshire reorganisations)
+  have no successor to compare against. They are dropped and logged, not scored as
+  "did not change".
+- **Degenerate features**: the decile deltas mostly round to zero, and z-scoring a
+  near-constant column turns its handful of non-modal rows into extreme outliers that
+  dominate KMeans distance. Columns whose modal value covers ≥95% of rows are zeroed and
+  listed in `meta.degenerate_features`.
 - **ML features**: 16 rank+decile deltas (the decile-only signal was too weak after
   mean+round). PCA is display-only.
 - **Prediction validity**: stratified train/test split; feature selection **and** fitting on
@@ -322,33 +344,78 @@ respective licence; please retain this attribution if you reuse the data.
 
 Held-out results (test split; baseline = majority-class "predict no change"):
 
-| Analysis | Baseline | Common-indices | Per-year best | Best single index |
-|----------|:--------:|:--------------:|:-------------:|-------------------|
-| 2015→2019 / 2018→2022 | 0.798 | 0.798 | 0.798 | ~0.798 (IMD) |
-| 2019→2025 / 2022→2026 | 0.575 | 0.471 | 0.483 | 0.598 (Living Environment) |
+| Analysis | Baseline | Common-indices | Per-year best | ROC AUC |
+|----------|:--------:|:--------------:|:-------------:|:-------:|
+| 2015→2019 / 2018→2022 | 0.779 | 0.779 | 0.767 | **0.452** |
+| 2019→2025 / 2022→2026 | 0.575 | 0.517 | 0.506 | **0.445** |
 
-- **No common indices generalize** across the two periods.
-- **2022**: indices give **zero lift** over the base rate (few councils flip, so "predict no
-  flip" already scores 0.80).
-- **2026**: the multivariate models do **worse** than baseline (overfitting); the single best
-  index (Living Environment) beats baseline by only ~2 points.
+- **ROC AUC ≈ 0.45 in both periods.** This is the honest headline: AUC is threshold-free
+  and unaffected by class imbalance, and 0.5 is a coin flip. The features cannot rank
+  councils by flip likelihood at all. Refitting with `class_weight="balanced"` forces the
+  model to predict plenty of flips and makes *balanced* accuracy worse, so the near-degenerate
+  output on the 2018→2022 pair is a symptom of absent signal, not of a mis-set threshold.
+- **No common indices generalize** across the two periods, and neither multivariate model
+  beats its baseline.
 
 **Conclusion: deprivation-change indices do not meaningfully predict a change of majority.**
-The UI presents this honestly — accuracies are always shown against the baseline so base-rate
-"accuracy" is not mistaken for skill.
+
+Two structural reasons, both visible in the data:
+
+1. **The outcome is mostly national swing.** Of the 150 flips in 2022→2026, ~91 are the
+   Conservatives losing — 26 of those to Reform UK, which went from 0 to 2,365 councillors.
+   National swing is by definition the same everywhere, so no cross-sectional local variable
+   can predict it.
+2. **The predictor barely moves.** Relative deprivation is highly stable: the IMD rank delta
+   has sd ≈ 2.4 percentile points over four years.
+
+Answering the question properly would need a target that isolates *local* variation from
+national swing (e.g. per-council swing measured relative to the national swing for that
+party), rather than a raw majority flip.
+
+The UI presents accuracies against the baseline so base-rate "accuracy" is not mistaken
+for skill.
 
 ---
 
 ## Testing
 
-- `tools/test_all.py` — end-to-end on the real data for both pairs (ingestion → ML → prediction),
-  validating both schemas and asserting invariants (binary `change_factor`, PCA coords present,
-  binary predictions, non-empty `key_indices`, held-out accuracies).
-- `tests/test_core.py` — unit tests: majority-flip logic, decile aggregation, fuzzy join,
-  z-score/k-selection, significance/importance, common-index intersection, held-out fit.
+One command runs everything — both suites, with coverage gates:
+
+```bash
+./scripts/run_tests.sh                # Python + Dart, coverage enforced
+./scripts/run_tests.sh python         # Python only
+./scripts/run_tests.sh dart           # Flutter only
+./scripts/run_tests.sh --no-coverage  # faster, no coverage run
+```
+
+| Suite | Command | Tests | Coverage | Gate |
+|-------|---------|-------|----------|------|
+| Python (`tests/`) | `./.venv/bin/python -m pytest` | 228 | 98% | 70% |
+| Dart (`frontend/curia_augur_ui/test/`) | `flutter test --coverage` | 137 | 78% | 70% |
+
+Everything runs offline — no AWS account, credentials, network or Docker. The S3 branches
+of the IO layer and the files API are covered with a small in-memory stub client rather
+than `moto`. What is deliberately **not** covered, and why, is listed in
+[`tests/README.md`](tests/README.md) and
+[`frontend/curia_augur_ui/test/README.md`](frontend/curia_augur_ui/test/README.md) — in
+short: the CDK stacks (synth needs Docker to build three lambda images), the Cognito auth
+service, and `ApiService` beyond its error path.
+
+First-time Python setup:
+
+```bash
+python3 -m venv .venv
+./.venv/bin/pip install -r requirements-dev.txt
+```
+
+Separately, `tools/test_all.py` is the end-to-end check against the **real** datasets for
+both comparison pairs (ingestion → ML → prediction), validating both JSON schemas and
+asserting the pipeline invariants (binary `change_factor`, `change_factor_cluster` set
+only in the high-change cluster, clusters ranked 1..n by accuracy, PCA coords present,
+non-empty `key_indices`):
+
 ```bash
 CURIA_LOCAL=true ./.venv/bin/python tools/test_all.py
-./.venv/bin/python -m unittest tests.test_core -v
 ```
 
 ---

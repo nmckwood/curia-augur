@@ -1,8 +1,8 @@
-"""Data ingestion lambda handler (container image).
+"""
+Data ingestion lambda handler
 
-Thin wrapper: all logic lives in curia_core.ingestion.pipeline so the exact same code
-runs locally via tools/run_ingestion_local.py. Invoked directly with the REQ
-Data-Ingestion-3 event shape.
+Thin wrapper: all logic lives in curia_core.ingestion.pipeline 
+so the exact same code runs locally via tools/run_ingestion_local.py,
 """
 
 from curia_core.ingestion import pipeline

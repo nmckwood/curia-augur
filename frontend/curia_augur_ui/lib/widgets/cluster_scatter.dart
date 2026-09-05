@@ -2,23 +2,18 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../models/analysis.dart';
+import '../theme/palette.dart';
+import 'mark_swatch.dart';
 
-/// Fixed palette for cluster ids (KMeans k is 2..7).
-const List<Color> kClusterColors = [
-  Color(0xFF1565C0), // blue
-  Color(0xFFC62828), // red
-  Color(0xFF2E7D32), // green
-  Color(0xFF6A1B9A), // purple
-  Color(0xFFEF6C00), // orange
-  Color(0xFF00838F), // teal
-  Color(0xFFAD1457), // pink
-];
-
-Color clusterColor(int clusterId) =>
-    kClusterColors[clusterId % kClusterColors.length];
+Color clusterColor(int clusterId) => Palette.cluster(clusterId);
 
 /// XY scatter of the clusters (REQUIREMENTS_2 UI-1): each constituency plotted at its
-/// 2-component PCA coordinates, coloured by cluster, with a hover/tap tooltip.
+/// 2-component PCA coordinates, with a hover/tap tooltip.
+///
+/// WCAG 2.2 SC 1.4.1: each cluster gets both a validated categorical hue AND a marker
+/// shape (circle / square / cross), assigned in the same fixed order, so clusters remain
+/// distinguishable under any colour-vision deficiency and in greyscale. The legend shows
+/// the shape, and the tooltip names the cluster in text.
 class ClusterScatter extends StatelessWidget {
   const ClusterScatter({super.key, required this.constituencies});
 
@@ -38,9 +33,9 @@ class ClusterScatter extends StatelessWidget {
         ScatterSpot(
           c.pcaX,
           c.pcaY,
-          dotPainter: FlDotCirclePainter(
-            color: clusterColor(c.clusterId).withValues(alpha: 0.75),
-            radius: 4,
+          dotPainter: markDotPainter(
+            clusterMark(c.clusterId),
+            clusterColor(c.clusterId).withValues(alpha: 0.8),
           ),
         ),
     ];
@@ -52,11 +47,11 @@ class ClusterScatter extends StatelessWidget {
           spacing: 12,
           children: [
             for (final id in clusterIds)
-              Row(mainAxisSize: MainAxisSize.min, children: [
-                Container(width: 12, height: 12, color: clusterColor(id)),
-                const SizedBox(width: 4),
-                Text('Cluster $id'),
-              ]),
+              MarkLegend(
+                mark: clusterMark(id),
+                color: clusterColor(id),
+                label: 'Cluster $id',
+              ),
           ],
         ),
         const SizedBox(height: 8),
@@ -73,10 +68,12 @@ class ClusterScatter extends StatelessWidget {
                   axisNameWidget: Text('PCA component 1'),
                   sideTitles: SideTitles(showTitles: true, reservedSize: 24),
                 ),
-                topTitles:
-                    AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                rightTitles:
-                    AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
               ),
               scatterTouchData: ScatterTouchData(
                 enabled: true,

@@ -21,6 +21,10 @@ directly (as the local runner does).
 2. Runs KMeans for `k` in `K_RANGE` (2..14) and picks the best `k` by silhouette score.
 3. Computes per-cluster mean/median `change_factor`, flags the high-change cluster, runs a
    Kruskal-Wallis test across clusters, and ranks feature importance.
+3a. Treats the clustering as a prediction: every authority in the high-change cluster gets
+   `change_factor_cluster = 1`, all others 0. Each cluster is then scored on the percentage of
+   its councils that call matched (`accuracy`) and ranked (`accuracy_rank`); the all-council
+   figure lands in `meta.cluster_accuracy` (REQUIREMENTS_4).
 4. Computes a 2-component **PCA** projection per constituency (for the UI cluster scatter).
 5. Validates against the analysis schema.
 

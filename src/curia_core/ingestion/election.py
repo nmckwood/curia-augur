@@ -34,7 +34,8 @@ def _majority_party(parties):
 def _change_factor(benchmark_parties, target_parties):
     """1 if the majority party changed between benchmark and target, else 0.
 
-    Returns 0 when either year has no seats (no majority to compare).
+    Both sides are guaranteed non-empty by the caller, which drops councils that are
+    absent from either year rather than scoring them.
     """
     benchmark_majority = _majority_party(benchmark_parties)
     target_majority = _majority_party(target_parties)
@@ -44,17 +45,29 @@ def _change_factor(benchmark_parties, target_parties):
 
 
 def build_election_results(benchmark_records, target_records):
-    """Return ``{council: {"council":..., "change_factor":int, "<party>": delta_int}}``.
+    """Return ``(results, absent)``.
 
-    Only councils present in the benchmark year are emitted; per-party deltas are
-    target - benchmark; change_factor is the binary majority-flip flag.
+    ``results`` is ``{council: {"council":..., "change_factor":int, "<party>": delta_int}}``
+    for every council present in BOTH years; per-party deltas are target - benchmark and
+    change_factor is the binary majority-flip flag.
+
+    ``absent`` lists councils that exist in the benchmark year but not the target year -
+    almost always local-government reorganisation (e.g. the 2019-2023 Northamptonshire,
+    Buckinghamshire, Cumbria and North Yorkshire mergers). They have no successor to
+    compare against, so scoring them would silently label an abolished council as
+    "did not change" and dilute the positive class. They are dropped and reported so the
+    caller can log them.
     """
     benchmark = seat_counts(benchmark_records)
     target = seat_counts(target_records)
 
     results = {}
+    absent = []
     for council, benchmark_parties in benchmark.items():
-        target_parties = target.get(council, {})
+        target_parties = target.get(council)
+        if not target_parties:
+            absent.append(council)
+            continue
         entry = {
             "council": council,
             "change_factor": _change_factor(benchmark_parties, target_parties),
@@ -62,4 +75,4 @@ def build_election_results(benchmark_records, target_records):
         for party in set(benchmark_parties) | set(target_parties):
             entry[party] = target_parties.get(party, 0) - benchmark_parties.get(party, 0)
         results[council] = entry
-    return results
+    return results, sorted(absent)

@@ -1,7 +1,8 @@
-"""Data ingestion pipeline orchestration.
+"""
+Data ingestion pipeline orchestration.
 
 Reads the four input files named in the event, aggregates and joins them, writes
-``output/deprivation-election-data-<key>.json`` plus the unused ``.log`` (REQ Data-Ingestion).
+``output/deprivation-election-data-<key>.json`` plus the unused ``.log``.
 This module is the single entry point imported by both the lambda handler and the local
 runner; it performs no AWS-specific work itself (that lives in common/io).
 """
@@ -19,11 +20,18 @@ from curia_core.ingestion.readers import read_records
 
 
 def _year(filename):
+    """
+    for some input file extracts the year using regex
+    NOTE: only works for years within 1900-2099
+    """
     match = re.search(r"(19|20)\d{2}", filename)
     return match.group(0) if match else "unknown"
 
 
 def _composite_key(event):
+    """
+    creates a composite key made of the four files years
+    """
     return (
         f"d_{_year(event['deprivation_file_start'])}"
         f"_d_{_year(event['deprivation_file_end'])}"
@@ -33,21 +41,38 @@ def _composite_key(event):
 
 
 def run(event):
-    """Run the ingestion pipeline for one comparison pair.
-
-    ``event`` matches REQ Data-Ingestion-3. Returns a dict of output locations/counts.
     """
-    key = _composite_key(event)
-    log_lines = []
+    Run the ingestion pipeline for one comparison pair.
 
+    ingests event like
+    {
+        "deprivation_file_start":"some file name",
+        "deprivation_file_end":"some file name",
+        "local_election_start":"some file name",
+        "local_election_end":"some file name"
+    }
+    """
+    # create the composite key which the pipeline will use as its output file name
+    key = _composite_key(event)
+
+    # to dump errors into a file
+    log_lines = []
+    
+    # for both sets of deprivation data join them to a local authority district
+    # data is normalised such that different data sets can be compared for
+    # example we must convert ranking to relative percentage due to changes
+    # in the number of LADs
     dep_start = deprivation.aggregate_to_lad(
         read_records(io.resolve_input_path(event["deprivation_file_start"]))
     )
     dep_end = deprivation.aggregate_to_lad(
         read_records(io.resolve_input_path(event["deprivation_file_end"]))
     )
+
+    # now compare the deltas in deprivation between the data sets
     dep_deltas = deprivation.compute_deltas(dep_start, dep_end)
 
+    # remove any data missing required fields
     for lad in set(dep_start) | set(dep_end):
         if lad not in dep_deltas:
             log_lines.append(
@@ -56,14 +81,30 @@ def run(event):
                 f"(missing in one year or incomplete fields)"
             )
 
-    election_results = election.build_election_results(
+    # for both sets of election result data calculate the majority party
+    # then from that the change factor (1 if the majority party changed 
+    # or 0 otherwsie) additionally preparing textual data about which party
+    # won etc.
+    election_results, absent_councils = election.build_election_results(
         read_records(io.resolve_input_path(event["local_election_start"])),
         read_records(io.resolve_input_path(event["local_election_end"])),
     )
 
+    # remove any data missing required fields
+    for council in absent_councils:
+        log_lines.append(
+            f"dropped council '{council}' as it has no seats in "
+            f"{event['local_election_end']} (abolished or reorganised); there is no "
+            f"successor council to compare its majority party against"
+        )
+
+    # fuzzy match (I.E find similar) council name and match to the LAD
+    # and hence with the LAD match each council to the deprivation data
     matches, unmatched = joining.match_councils_to_lads(
         list(election_results.keys()), list(dep_deltas.keys())
     )
+
+    # remove any data missing required fields
     for council, best_lad, score in unmatched:
         log_lines.append(
             f"could not join council '{council}' with any Local Authority District name "
@@ -71,6 +112,8 @@ def run(event):
             f"as the fuzzy match did not find anything (best='{best_lad}', score={score})"
         )
 
+    # output all the data into our schema
+    # for each council, the processed deprivation data & local election results
     schema = ingestion_output_schema()
     output = []
     used_lads = set()

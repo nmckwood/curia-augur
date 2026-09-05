@@ -72,3 +72,41 @@
 [ACTION] app.py: root_domain now required context (exits if missing), no default; genericised domain examples in domain_stack/README/UI README/FLUTTER_WSL/config.dart/deploy_web to <your-domain>
 [ACTION] Added MIT LICENSE (2026 neils wood); README: Data sources & attribution (IoD/OGL, OpenCouncilData, ONS boundaries/OGL, OSM/ODbL) + License section
 [RESULT] py_compile OK; real domain remains only in authored REQUIREMENTS.md spec + historical CLAUDE.log
+[PROMPT] docs/REQUIREMENTS_4.md - please read and implement
+[PLAN] Add change_factor_cluster + per-cluster accuracy/rank to ML output; UI: two maps only, pie/xy/table switched to change_factor_cluster
+[QUESTION] 3 maps -> "two map projections": keep deprivation-metric map or not? And keep spec's inverted green (green=change_factor_cluster 1)?
+[ANSWER] Exactly two maps (drop deprivation-metric map, dropdown drives table only); colours consistent (green = no change on BOTH maps)
+[ACTION] stats.py: cluster_predictions() + score_clusters() -> per-cluster predicted_change_factor/n_correct/accuracy/accuracy_rank (ties by size) + overall block
+[ACTION] pipeline.py: change_factor_cluster per constituency, meta.cluster_accuracy; schemas.py: new cluster/constituency/meta fields
+[ACTION] Dart: PredictionSource enum {cluster,common,perYear}; Constituency.changeFactorCluster/predictionFor/correctFor; ClusterSummary accuracy+rank; Analysis.clusterAccuracy/clustersByAccuracy
+[ACTION] UI: MapColorMode.clusterPredicted; home_screen 2 maps; AccuracyPie+PredictionScatter default to cluster source; DataTableView +Actual/Cluster prediction/Correct cols; AnalysisSummary cluster ranking
+[ACTION] tests/test_core.py: test_score_clusters_accuracy_and_rank; tools/test_all.py: 3 new e2e checks; README + ml_pipeline/UI READMEs updated
+[RESULT] unit 10/10 OK; e2e ALL PASSED; flutter analyze lib clean (1 pre-existing info); cluster accuracy pair1 65.4% (c0 80.5% rank1, c1 22.2%), pair2 50.0% (c1 66.7% rank1, c0 45.7%)
+[PROMPT] On the Prediction accuracy row show accuracy of just choosing the most common change factor + a linear regression summary derived from it, using predict.py output
+[ACTION] predict.py: _baseline_accuracy -> _majority_baseline returning {majority_class, holdout_accuracy, all_accuracy, n_correct_all, n_total_all}; meta.prediction.baseline added (baseline_accuracy kept); schema updated
+[ACTION] Dart: PredictionMeta gains baselineMajorityClass/AllAccuracy/CorrectAll/TotalAll + upliftOverBaseline; new accuracy_donut.dart (shared), baseline_accuracy.dart, regression_summary.dart; home row = scatter|accuracy pie|no-ML pie|regression summary
+[RESULT] pair1 cluster 63.2% vs no-ML 77.9% (uplift 0.0pp); pair2 cluster 51.4% vs no-ML 56.9% (regression 51.7%, uplift -5.7pp) -> ML adds nothing over guessing majority
+[PROMPT] Add a banner warning users about ecological fallacy (ethics review / Appendix 1)
+[ACTION] interpretation_banner.dart mounted via MaterialApp.builder so it sits above every screen; expanded by default, collapsible not dismissable; covers area-vs-individual, omitted factors, neutral cluster-n naming
+[PROMPT] Update UI to adhere to W3C WCAG 2.2, esp SC 1.4.1 Use of Color (maps/plots exposed); divergent palette + tooltips
+[ACTION] Loaded dataviz skill; validated palette with scripts/validate_palette.js: blue #2a78d6 / orange #eb6834 all-pairs CVD dE 24.7, normal dE 33.6, both >=3:1 -> ALL PASS; diverging blue<->grey<->red dE 21.6 PASS; cluster slots 1-3 all-pairs PASS
+[ACTION] New lib/theme/palette.dart + mark_swatch.dart; removed every green/red hex; non-colour cues: dashed vs solid polygon outlines, circle/square/cross markers, in-slice word labels, tick/dash glyphs, text-first data table
+[ACTION] Contrast fixes: mutedInk #52514E (7.9:1) replaces black54 (3.4:1); slice ink near-black (4.8:1 blue / 6.6:1 orange); banner ink #8A5200 (6.0:1); map detail now reachable by TAP not just hover; Semantics labels on maps/legends
+[PROMPT] Add suitable tooltips (and hints they are there) explaining UI functionality and what each widget displays
+[ACTION] info_heading.dart: InfoHeading/InfoHint with visible circle-i affordance, hover + tap trigger, semantics label; wired to both dropdowns, both maps, cluster scatter, prediction scatter, accuracy pie, no-ML pie, regression summary, summary card, data table, per-year page, MPI bar chart, app-bar button
+[FIX] Data table overflowed at 800px with 7 columns -> wrapped in horizontal SingleChildScrollView; InfoHeading title now ellipsises
+[ACTION] pubspec: added flutter_test dev dep; rewrote test/widget_test.dart (was broken, referenced non-existent MyApp) with 7 tests covering banner, tooltips, non-colour cues, palette
+[RESULT] flutter analyze lib clean; flutter test 7/7 pass; flutter build web OK; python unittest 13/13; tools/test_all.py ALL PASSED; UI assets refreshed
+[PROMPT] Write unit tests for all the python code, document where/how to run, AWS-dependent bits can be skipped if mocking is hard, min 70% coverage
+[ACTION] Replaced tests/test_core.py with 13 pytest modules + conftest.py (fixtures, synthetic IoD/election builders, in-memory StubS3); pytest.ini (pythonpath, testpaths, --cov, --cov-fail-under=70); pytest+pytest-cov added to requirements-dev.txt
+[ACTION] AWS handled without moto: io._s3 monkeypatched to StubS3 so BOTH local and S3 branches are covered; files_api tested by injecting a stub boto3 into sys.modules before loading app.py from path
+[RESULT] Python 228 tests pass, coverage 98.42% (634 stmts, 10 missed). Skipped+documented: infra/ + app.py (CDK synth needs Docker for 3 DockerImageFunction assets), tools/*.py
+[FINDING] CSV deprivation input silently yields zero deltas (DictReader gives strings, aggregate_to_lad only sums int/float). Prod uses JSON so not live; documented in test_csv_deprivation_input_yields_no_numeric_fields
+[PROMPT] Dart/Flutter unit tests (ignoring where mocking is complex) + a bash script to run all python and dart unit tests
+[ACTION] 14 Dart test files under test/{models,theme,widgets,screens} + helpers.dart (JSON builders, sizing harness, WCAG contrast fn); MapView DOES render in tests (tile 400s are non-fatal) so polygons/legends/semantics are asserted
+[ACTION] Accessibility asserted not just documented: real contrast ratios vs AA/AAA, dashed-vs-solid polygon outlines, marker shapes per series, tick/dash glyphs, text-first data table
+[FIX] Three real defects found by the new tests: (1) `?? {}` in Constituency/PredictionMeta/Analysis fromJson yields Map<dynamic,dynamic> so the cast threw instead of defaulting; (2) InterpretationBanner overflowed short viewports -> Flexible + bounded scroll; (3) AccuracyDonut legend Row overflowed narrow columns -> Wrap
+[CORRECTION] Earlier claim "black54 is 3.45:1" was wrong (that is #8A8A8A). Composited over white it is 4.61:1 - scrapes AA, misses AAA. mutedInk 7.94:1 is still the right call; palette comment, README and test updated to say so
+[ACTION] scripts/run_tests.sh: python|dart|all, --no-coverage, buffers flutter output (summary on pass, full on fail), parses lcov per file, enforces 70% on both suites
+[ACTION] Docs: tests/README.md, frontend/curia_augur_ui/test/README.md (both list what is NOT covered and why), README Testing section rewritten with the command table
+[RESULT] ./scripts/run_tests.sh -> python 228 pass 98.42%, dart 137 pass 77.97%, flutter analyze clean; both gates met

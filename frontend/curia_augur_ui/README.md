@@ -42,9 +42,35 @@ assets/
 
 ## Pages
 **Home** (`home_screen.dart`) — banner, analysis-file dropdown, deprivation-metric selector,
-a written **summary**, three maps (deprivation metric / actual change / predicted change), a
-**PCA cluster scatter**, a **predicted-vs-actual scatter + accuracy pie**, and a filterable
-**table**. An app-bar button opens the per-year page.
+a written **summary** (including each cluster's accuracy and rank), **two maps** — actual
+election change and the cluster prediction (`change_factor_cluster`), both using green = no
+change so disagreements read as a colour flip — a **PCA cluster scatter**, a
+**predicted-vs-actual scatter + accuracy pie** (both scored on `change_factor_cluster`)
+alongside a **no-ML baseline pie** (always guess the most common `change_factor`) and a
+**regression summary** reading `predict.py`'s logistic-regression scores against that
+baseline, and a filterable **table** showing actual vs cluster prediction per authority. An
+app-bar button opens the per-year page.
+
+An **ecological-fallacy banner** sits above every screen (required by the project ethics
+review): findings are area-level and must not be read as individual voting behaviour.
+
+## Accessibility (WCAG 2.2)
+Charts and maps are the main exposure, so the original red/green "bad/good" palette was
+replaced under **SC 1.4.1 Use of Color**:
+- **Blue `#2a78d6` / orange `#eb6834`** for every binary outcome, and a diverging
+  blue→grey→red ramp for signed deprivation deltas. Both validated with the data-viz
+  palette validator (binary pair: CVD ΔE 24.7, normal-vision ΔE 33.6, both ≥ 3:1 on the
+  chart surface). Central definitions live in `lib/theme/palette.dart`.
+- **Colour is never the only cue**: map polygons also vary their outline (solid vs thicker
+  dashed), scatter series and clusters also vary marker shape (circle / square / cross),
+  donut slices are labelled in words inside the slice, the bar chart adds a ✓/– glyph, and
+  the data table states every value as text — it is the accessible equivalent of the maps.
+- **Contrast**: secondary text uses `#52514e` (7.9:1, AAA) rather than `black54`, which
+  renders at 4.61:1 and only just clears AA; slice labels are near-black (≥ 4.8:1 on both
+  fills, where white would have been 3.2:1 on the orange); the banner ink is 6.0:1.
+- **Tooltips throughout**, each flagged by a visible ⓘ affordance (`InfoHeading` /
+  `InfoHint`), opening on hover and on tap. Map details are reachable by tap as well as
+  hover, and marks/legends carry `Semantics` labels.
 
 **Per-year predictiveness** (`per_year_screen.dart`) — the most-predictive-indices bar chart
 (each index's univariate held-out accuracy vs the baseline marker), plus a predicted map,

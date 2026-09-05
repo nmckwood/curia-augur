@@ -1,88 +1,72 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../models/analysis.dart';
+import 'accuracy_donut.dart';
 
 /// Pie chart of prediction accuracy (REQUIREMENTS_3 UI-3): percentage of constituencies
-/// whose predicted change matched the actual outcome.
+/// whose predicted change matched the actual outcome. Defaults to the cluster prediction
+/// (REQUIREMENTS_4 UI-2), which is scored over every authority rather than a held-out
+/// split because the clustering is unsupervised — it never saw change_factor.
 class AccuracyPie extends StatelessWidget {
-  const AccuracyPie({super.key, required this.analysis, this.perYear = false});
+  const AccuracyPie({
+    super.key,
+    required this.analysis,
+    this.source = PredictionSource.cluster,
+  });
 
   final Analysis analysis;
-  final bool perYear; // show the per-year best-indices model instead of common
-
-  static const Color _correct = Color(0xFF2E7D32); // green
-  static const Color _incorrect = Color(0xFFC62828); // red
+  final PredictionSource source;
 
   @override
   Widget build(BuildContext context) {
     final pred = analysis.prediction;
-    final acc = perYear
-        ? (pred?.perYearHoldoutAccuracy ?? 0)
-        : analysis.accuracy; // held-out where available
-    final total = pred?.testSize ?? analysis.constituencies.length;
-    final correctPct = acc * 100;
-    final incorrectPct = 100 - correctPct;
-    final correct = (acc * total).round();
-    final scope = pred != null ? 'held-out' : 'in-sample';
-    final label = perYear ? 'Per-year best indices' : 'Common indices';
+    final isCluster = source == PredictionSource.cluster;
+    final acc = switch (source) {
+      PredictionSource.cluster => analysis.clusterAccuracy,
+      PredictionSource.perYear => pred?.perYearHoldoutAccuracy ?? 0,
+      PredictionSource.common => analysis.accuracy, // held-out where available
+    };
+    final total = isCluster
+        ? analysis.constituencies.length
+        : (pred?.testSize ?? analysis.constituencies.length);
+    final correct = isCluster
+        ? analysis.clusterCorrectCount
+        : (acc * total).round();
+    final scope = isCluster || pred == null ? 'all authorities' : 'held-out';
+    final label = switch (source) {
+      PredictionSource.cluster => 'Cluster prediction',
+      PredictionSource.perYear => 'Per-year best indices',
+      PredictionSource.common => 'Common indices',
+    };
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Prediction accuracy',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
-        Text('$label: ${correctPct.toStringAsFixed(1)}% correct '
-            '($correct / $total $scope)'),
-        if (pred != null)
-          Text(
-            'Baseline (predict "no change"): '
-            '${(pred.baselineAccuracy * 100).toStringAsFixed(1)}%',
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
-          ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: PieChart(
-            PieChartData(
-              sectionsSpace: 2,
-              centerSpaceRadius: 40,
-              sections: [
-                PieChartSectionData(
-                  value: correctPct,
-                  color: _correct,
-                  title: '${correctPct.toStringAsFixed(0)}%',
-                  radius: 60,
-                  titleStyle: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-                PieChartSectionData(
-                  value: incorrectPct,
-                  color: _incorrect,
-                  title: '${incorrectPct.toStringAsFixed(0)}%',
-                  radius: 60,
-                  titleStyle: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-          ),
-        ),
-        Row(mainAxisSize: MainAxisSize.min, children: [
-          _legend(_correct, 'Correct'),
-          const SizedBox(width: 12),
-          _legend(_incorrect, 'Incorrect'),
-        ]),
-      ],
+    return AccuracyDonut(
+      title: 'Prediction accuracy',
+      help: isCluster
+          ? 'How often the cluster prediction matched the actual result, across '
+                'every authority. The lines underneath break it down per cluster, '
+                'ranked most accurate first — a cluster that predicts "change" is '
+                'scored on the authorities that really did change, and vice versa. '
+                'Judge this against the "no ML" pie beside it: if it is not higher, '
+                'the clustering added nothing.'
+          : 'How often this model\'s prediction matched the actual result on the '
+                'held-out test split — authorities the model never saw while fitting.',
+      headline:
+          '$label: ${(acc * 100).toStringAsFixed(1)}% correct '
+          '($correct / $total $scope)',
+      accuracy: acc,
+      notes: isCluster
+          ? [
+              for (final c in analysis.clustersByAccuracy)
+                '#${c.accuracyRank} cluster ${c.clusterId} '
+                    '(predicts ${c.predictedChangeFactor == 1 ? 'change' : 'no change'}): '
+                    '${(c.accuracy * 100).toStringAsFixed(1)}% '
+                    '(${c.nCorrect} / ${c.size})',
+            ]
+          : [
+              if (pred != null)
+                'Baseline (predict "no change"): '
+                    '${(pred.baselineAccuracy * 100).toStringAsFixed(1)}%',
+            ],
     );
   }
-
-  Widget _legend(Color color, String label) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(width: 12, height: 12, color: color),
-          const SizedBox(width: 4),
-          Text(label),
-        ],
-      );
 }

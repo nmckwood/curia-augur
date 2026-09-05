@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/analysis.dart';
 import '../widgets/accuracy_pie.dart';
+import '../widgets/info_heading.dart';
 import '../widgets/map_view.dart';
 import '../widgets/most_predictive_indices.dart';
 import '../widgets/prediction_scatter.dart';
@@ -24,14 +25,14 @@ class PerYearScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final byName = {
-      for (final c in analysis.constituencies) MapView.normalize(c.name): c
+      for (final c in analysis.constituencies) MapView.normalize(c.name): c,
     };
     final pred = analysis.prediction;
     final headline = pred == null
         ? ''
         : 'Per-year best-indices model: '
-            '${(pred.perYearHoldoutAccuracy * 100).toStringAsFixed(1)}% held-out '
-            'vs baseline ${(pred.baselineAccuracy * 100).toStringAsFixed(1)}%.';
+              '${(pred.perYearHoldoutAccuracy * 100).toStringAsFixed(1)}% held-out '
+              'vs baseline ${(pred.baselineAccuracy * 100).toStringAsFixed(1)}%.';
 
     return Scaffold(
       appBar: AppBar(title: Text('Per-year predictiveness — $filename')),
@@ -53,8 +54,14 @@ class PerYearScreen extends StatelessWidget {
                 child: MostPredictiveIndices(analysis: analysis),
               ),
               const SizedBox(height: 16),
-              const Text('Predicted change (per-year best indices)',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const InfoHeading(
+                title: 'Predicted change (per-year best indices)',
+                help:
+                    'Where a model trained on THIS year\'s most predictive '
+                    'indices expects the majority to flip. Orange with a dashed '
+                    'outline is a predicted change; blue with a solid outline is '
+                    'no change.',
+              ),
               SizedBox(
                 height: 420,
                 child: MapView(
@@ -65,8 +72,14 @@ class PerYearScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text('Predicted vs actual change (per-year best indices)',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const InfoHeading(
+                title: 'Predicted vs actual change (per-year best indices)',
+                help:
+                    'Each authority appears twice: a blue circle for what '
+                    'actually happened and an orange cross for what the model '
+                    'predicted. Where the two sit at the same height the model '
+                    'was right. The pie beside it totals that up.',
+              ),
               SizedBox(
                 height: 320,
                 child: Row(
@@ -76,12 +89,15 @@ class PerYearScreen extends StatelessWidget {
                       flex: 2,
                       child: PredictionScatter(
                         constituencies: analysis.constituencies,
-                        perYear: true,
+                        source: PredictionSource.perYear,
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: AccuracyPie(analysis: analysis, perYear: true),
+                      child: AccuracyPie(
+                        analysis: analysis,
+                        source: PredictionSource.perYear,
+                      ),
                     ),
                   ],
                 ),

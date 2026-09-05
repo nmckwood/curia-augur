@@ -73,6 +73,32 @@ def run_pair(name, event):
         all("pca_x" in c and "pca_y" in c for c in analysis["constituencies"]),
         "every constituency has pca_x/pca_y coords",
     )
+    # REQUIREMENTS_4: the clustering scored as a prediction.
+    high_ids = {c["cluster_id"] for c in analysis["clusters"] if c["is_high_change_cluster"]}
+    _check(
+        all(
+            c["change_factor_cluster"] == (1 if c["cluster_id"] in high_ids else 0)
+            for c in analysis["constituencies"]
+        ),
+        "change_factor_cluster is 1 exactly in the high-change cluster",
+    )
+    _check(
+        sorted(c["accuracy_rank"] for c in analysis["clusters"])
+        == list(range(1, len(analysis["clusters"]) + 1)),
+        "clusters are ranked 1..n by accuracy",
+    )
+    overall = analysis["meta"]["cluster_accuracy"]
+    actual_correct = sum(
+        1
+        for c in analysis["constituencies"]
+        if c["change_factor_cluster"] == c["change_factor"]
+    )
+    _check(
+        overall["n_correct"] == actual_correct
+        and overall["n_total"] == len(analysis["constituencies"]),
+        f"meta.cluster_accuracy matches the constituencies "
+        f"({overall['accuracy'] * 100:.1f}%)",
+    )
     return {
         "analysis_key": analysis_result["analysis_key"],
         "ingestion_key": ingest["output_key"],

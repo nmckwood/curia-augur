@@ -8,3 +8,8 @@ frontend/curia_augur_ui/build/
 frontend/curia_augur_ui/.dart_tool/
 frontend/curia_augur_ui/assets/analysis/*.json
 frontend/curia_augur_ui/assets/geo/*.geojson
+# Test artefacts
+.coverage
+coverage/
+frontend/curia_augur_ui/coverage/
+.pytest_cache/

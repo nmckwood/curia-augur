@@ -46,6 +46,12 @@ DEPRIVATION_DELTA_KEYS = [f + DELTA_SUFFIX for f in DEPRIVATION_INPUT_FIELDS]
 # The 8 decile-delta keys (kept for the per-constituency display block).
 DECILE_DELTA_KEYS = [decile_field(d) + DELTA_SUFFIX for d in DOMAINS]
 
+# The 8 rank-delta keys. These are real-valued: IoD re-bases its ranks every edition
+# (32,844 LSOAs in 2015/2019 vs 33,755 in 2025), so ingestion converts ranks to
+# within-edition national percentiles before differencing. A rank delta is therefore a
+# change in percentile POINTS (-100..100), not a change in raw rank position.
+RANK_DELTA_KEYS = [rank_field(d) + DELTA_SUFFIX for d in DOMAINS]
+
 # KMeans feature set. REQ ML-4 said "decile delta only", but at LAD-mean level the
 # decile deltas round to mostly 0 and carry almost no signal, so clustering collapsed to
 # k=2 with a non-significant Kruskal-Wallis. Per the user's decision we cluster on the
@@ -66,7 +72,12 @@ def ingestion_output_schema():
                 "Local Authority District name": {"type": "string"},
                 "deprivation": {
                     "type": "object",
-                    "properties": {k: {"type": "integer"} for k in DEPRIVATION_DELTA_KEYS},
+                    # Rank deltas are percentile points (float); decile deltas are whole
+                    # deciles (int). See RANK_DELTA_KEYS.
+                    "properties": {
+                        k: {"type": "number" if k in RANK_DELTA_KEYS else "integer"}
+                        for k in DEPRIVATION_DELTA_KEYS
+                    },
                     "required": list(DEPRIVATION_DELTA_KEYS),
                     "additionalProperties": False,
                 },
@@ -112,6 +123,22 @@ def ml_output_schema():
                     },
                     "n_constituencies": {"type": "integer"},
                     "generated_at": {"type": "string", "format": "date-time"},
+                    "degenerate_features": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Features zeroed by the near-constant guard in features.zscore_normalize; they carry no spread and were excluded from the distance metric, so a 0 importance score for these means 'not usable', not 'not important'",
+                    },
+                    "cluster_accuracy": {
+                        "type": "object",
+                        "description": "Accuracy of change_factor_cluster over all councils (REQUIREMENTS_4)",
+                        "properties": {
+                            "accuracy": {"type": "number"},
+                            "n_correct": {"type": "integer"},
+                            "n_total": {"type": "integer"},
+                        },
+                        "required": ["accuracy", "n_correct", "n_total"],
+                        "additionalProperties": False,
+                    },
                     "key_indices": {
                         "type": "array",
                         "items": {"type": "string"},
@@ -127,6 +154,23 @@ def ml_output_schema():
                             "train_size": {"type": "integer"},
                             "test_size": {"type": "integer"},
                             "baseline_accuracy": {"type": "number"},
+                            "baseline": {
+                                "type": "object",
+                                "description": "The 'no ML' bar: always predict the most common change_factor (REQUIREMENTS_4 UI)",
+                                "properties": {
+                                    "majority_class": {"type": "integer"},
+                                    "holdout_accuracy": {"type": "number"},
+                                    "all_accuracy": {"type": "number"},
+                                    "n_correct_all": {"type": "integer"},
+                                    "n_total_all": {"type": "integer"},
+                                },
+                                "required": [
+                                    "majority_class",
+                                    "holdout_accuracy",
+                                    "all_accuracy",
+                                ],
+                                "additionalProperties": False,
+                            },
                             "per_year_holdout_accuracy": {"type": "number"},
                             "per_year_train_accuracy": {"type": "number"},
                             "per_year_indices": {
@@ -164,6 +208,10 @@ def ml_output_schema():
                         "mean_change_factor": {"type": "number"},
                         "median_change_factor": {"type": "number"},
                         "is_high_change_cluster": {"type": "boolean"},
+                        "predicted_change_factor": {"type": "integer"},
+                        "n_correct": {"type": "integer"},
+                        "accuracy": {"type": "number"},
+                        "accuracy_rank": {"type": "integer"},
                         "centroid": {
                             "type": "object",
                             "additionalProperties": {"type": "number"},
@@ -208,6 +256,7 @@ def ml_output_schema():
                         "council": {"type": "string"},
                         "cluster_id": {"type": "integer"},
                         "change_factor": {"type": "integer"},
+                        "change_factor_cluster": {"type": "integer"},
                         "deprivation_deciles": {
                             "type": "object",
                             "additionalProperties": {"type": "integer"},

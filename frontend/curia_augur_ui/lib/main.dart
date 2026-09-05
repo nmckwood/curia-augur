@@ -4,6 +4,7 @@ import 'config.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/auth_service.dart';
+import 'widgets/interpretation_banner.dart';
 
 void main() {
   runApp(const CuriaAugurApp());
@@ -38,6 +39,14 @@ class _CuriaAugurAppState extends State<CuriaAugurApp> {
     return MaterialApp(
       title: 'Curia Augur',
       theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
+      // The ethics review requires the ecological-fallacy caveats to be visible on
+      // opening the UI, so the banner sits above every screen rather than inside one.
+      builder: (context, child) => Column(
+        children: [
+          const InterpretationBanner(),
+          Expanded(child: child ?? const SizedBox.shrink()),
+        ],
+      ),
       home: Builder(
         builder: (context) {
           if (!Config.requiresAuth) {
@@ -45,7 +54,8 @@ class _CuriaAugurAppState extends State<CuriaAugurApp> {
           }
           if (_restoring) {
             return const Scaffold(
-                body: Center(child: CircularProgressIndicator()));
+              body: Center(child: CircularProgressIndicator()),
+            );
           }
           final auth = _auth!;
           if (auth.isAuthenticated) {
@@ -57,10 +67,7 @@ class _CuriaAugurAppState extends State<CuriaAugurApp> {
               },
             );
           }
-          return LoginScreen(
-            auth: auth,
-            onSignedIn: () => setState(() {}),
-          );
+          return LoginScreen(auth: auth, onSignedIn: () => setState(() {}));
         },
       ),
     );

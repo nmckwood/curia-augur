@@ -20,7 +20,9 @@ import json
 from curia_core.common import io
 from curia_core.common.schemas import ML_FEATURE_KEYS
 
+# training data, 70% will be for training and 30% for verification
 TEST_SIZE = 0.3
+# common random seed number
 RANDOM_STATE = 42
 
 
@@ -140,20 +142,38 @@ def _fit_eval(matrix, targets, train_idx, test_idx):
     }
 
 
-def _baseline_accuracy(targets, train_idx, test_idx):
-    """Held-out accuracy of always predicting the train-majority class.
+def _majority_baseline(targets, train_idx, test_idx):
+    """The "no machine learning at all" bar: always predict the most common change_factor.
 
-    This is the bar any index must beat: if the majority of councils don't flip, a
-    model that predicts "no change" for everyone already scores the base rate.
+    This is the bar any index must beat: if the majority of councils don't flip, a model
+    that predicts "no change" for everyone already scores the base rate. Reported two ways
+    so it is comparable to both other numbers in the UI - ``holdout_accuracy`` against the
+    regression model's held-out score, and ``all_accuracy`` against the cluster prediction,
+    which is scored over every authority.
     """
     import numpy as np
 
     train_targets = targets[train_idx]
     if len(train_targets) == 0:
-        return 0.0
+        return {
+            "majority_class": 0,
+            "holdout_accuracy": 0.0,
+            "all_accuracy": 0.0,
+            "n_correct_all": 0,
+            "n_total_all": int(len(targets)),
+        }
     values, counts = np.unique(train_targets, return_counts=True)
     majority = int(values[counts.argmax()])
-    return float((targets[test_idx] == majority).mean()) if len(test_idx) else 0.0
+    n_correct_all = int((targets == majority).sum())
+    return {
+        "majority_class": majority,
+        "holdout_accuracy": (
+            float((targets[test_idx] == majority).mean()) if len(test_idx) else 0.0
+        ),
+        "all_accuracy": float(n_correct_all / len(targets)) if len(targets) else 0.0,
+        "n_correct_all": n_correct_all,
+        "n_total_all": int(len(targets)),
+    }
 
 
 def _univariate_accuracies(matrix, targets, train_idx, test_idx):
@@ -189,6 +209,9 @@ def run(items, top_k=8):
     computes the common (intersection) index set, fits both a common-indices model and a
     per-year best-indices benchmark, augments + writes back each analysis, returns a summary.
     """
+    # for some set of values X (deprivation data) cam we predict Y (the change factor)
+
+    # prepare the data pipeline and machine learning pipeline data for supervised learning
     loaded = []
     for item in items:
         analysis_key = item["analysis_key"]
@@ -215,25 +238,41 @@ def run(items, top_k=8):
             }
         )
 
+    # for each of our comparison years find the common X values I.E the indices of deprivation
+    # which are ranked highly in both data sets
     common = common_indices([p["per_year"] for p in prepared])
 
     results = []
+    # for each compared election year
     for p in prepared:
+        # extract only the indices which are common EG use columns a and b in the analysis
         common_cols = [ML_FEATURE_KEYS.index(i) for i in common]
         per_year_cols = [ML_FEATURE_KEYS.index(i) for i in p["per_year"]]
 
+        # for each set of common indices for each local authority train the model on the
+        # combinations (for each LAD) and the answer they result in (change factor),
+        # then the model makes predications based on that and verifies against its test 
+        # data set, essentially assigning a score to each predictions that fit answers
         preds_common, common_metrics = _fit_eval(
             p["matrix"][:, common_cols], p["targets"], p["train_idx"], p["test_idx"]
         )
         preds_per_year, per_year_metrics = _fit_eval(
             p["matrix"][:, per_year_cols], p["targets"], p["train_idx"], p["test_idx"]
         )
+        # we repeat the _fit_eval but individually for each deprivation indices to collect
+        # additional data to see if they are more informative than the cluster of common
+        # indices.
         index_details = _univariate_accuracies(
             p["matrix"], p["targets"], p["train_idx"], p["test_idx"]
         )
-        baseline = _baseline_accuracy(p["targets"], p["train_idx"], p["test_idx"])
 
-        # Per-constituency predictions: COMMON-indices (REQ_3) and per-year best-indices.
+        # now without using the model we find the most common result in the training data
+        # I.E what is the most common change_factor (0 or 1), then compare against each of
+        # our test sets predicted results, does our regression model predict change more than
+        # simply picking the most common result
+        baseline = _majority_baseline(p["targets"], p["train_idx"], p["test_idx"])
+
+        # prepare the output data
         for c, pred_common, pred_py in zip(
             p["constituencies"], preds_common, preds_per_year
         ):
@@ -248,7 +287,8 @@ def run(items, top_k=8):
             "test_size": int(len(p["test_idx"])),
             "holdout_accuracy": common_metrics["holdout_accuracy"],
             "train_accuracy": common_metrics["train_accuracy"],
-            "baseline_accuracy": baseline,
+            "baseline_accuracy": baseline["holdout_accuracy"],
+            "baseline": baseline,
             "per_year_holdout_accuracy": per_year_metrics["holdout_accuracy"],
             "per_year_train_accuracy": per_year_metrics["train_accuracy"],
             "per_year_indices": list(p["per_year"]),
