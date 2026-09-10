@@ -16,7 +16,7 @@ def plot_impact_effort(features: list[dict]):
         return
 
     # Extract data
-    names = [f["featureName"] for f in features]
+    names = [f["TaskName"] for f in features]
     impacts = [f["impact"] for f in features]
     efforts = [f["effort"] for f in features]
 
@@ -30,7 +30,7 @@ def plot_impact_effort(features: list[dict]):
     y_mid = 5.0
 
     # Set up figure
-    fig, ax = plt.subplots(figsize=(10, 7), dpi=120)
+    fig, ax = plt.subplots(figsize=(15, 9), dpi=120)
 
     # 1. Background Quadrant Colors
     # Top-Left: Quick Wins (High Impact, Low Effort)
@@ -131,7 +131,7 @@ def plot_impact_effort(features: list[dict]):
     ax.set_xlabel("Effort (Man-Days)", fontsize=11, fontweight="bold", labelpad=10)
     ax.set_ylabel("Impact (0 to 10)", fontsize=11, fontweight="bold", labelpad=10)
     ax.set_title(
-        "Feature Prioritization Matrix (Impact vs. Effort)",
+        "Task Prioritization Matrix (Impact vs. Effort)",
         fontsize=14,
         fontweight="bold",
         pad=15,
@@ -151,16 +151,22 @@ def plot_impact_effort(features: list[dict]):
 # Example Usage
 if __name__ == "__main__":
     data = [
-        {"featureName": "data ingestion PL", "impact": 7, "effort": 10},
-        {"featureName": "CDK infra", "impact": 9, "effort": 5},
-        {"featureName": "user interface base", "impact": 9, "effort": 7},
-        {"featureName": "k means", "impact": 8, "effort": 10},
-        {"featureName": "k means cross analysis", "impact": 8, "effort": 6},
-        {"featureName": "UI APIs", "impact": 10, "effort": 5},
-        {"featureName": "XY charts", "impact": 4, "effort": 5},
-        {"featureName": "Graph relationships", "impact": 3, "effort": 10},
-        {"featureName": "UI guide buttons", "impact": 3, "effort": 2},
-        {"featureName": "Map Projections", "impact": 8, "effort": 3},
+        {"TaskName": "literature review", "impact": 10, "effort": 10},
+        {"TaskName": "risk analysis", "impact": 6, "effort": 7},
+        {"TaskName": "LESPI", "impact": 5, "effort": 9},
+        {"TaskName": "project planning", "impact": 3, "effort": 8},
+        {"TaskName": "hardware selection", "impact": 4, "effort": 5},
+        {"TaskName": "system design", "impact": 8, "effort": 3},
+        {"TaskName": "software architecture ", "impact": 9, "effort": 7},
+        {"TaskName": "IaC", "impact": 9, "effort": 2},
+        {"TaskName": "data ingestion pl", "impact": 10, "effort": 6},
+        {"TaskName": "machine learning pl", "impact": 9, "effort": 7},
+        {"TaskName": "prediction pl", "impact": 8, "effort": 8},
+        {"TaskName": "RESTful APIs", "impact": 9, "effort": 1},
+        {"TaskName": "User Interface", "impact": 9, "effort": 7},
+        {"TaskName": "W3C usability features", "impact": 4, "effort": 1},
+        {"TaskName": "Testing and QA", "impact": 3, "effort": 4},
+        
     ]
 
     plot_impact_effort(data)
