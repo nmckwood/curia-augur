@@ -133,7 +133,6 @@ then calculate the change_factor and populate the output json `deprivation-elect
 - run k-means for 2-7, compute the silhouette score and pick the best k value.
 - fit KMeans o the 8 normalized features.
 - compute the mean change_factor per cluster.
-- run Kruskal-Wallis to check the differences are significant.
 - identify clusters with the largest change factor
 5. find which deprivation indices define the high change cluster and compare the mean value in the high change cluster against the other clusters (those with the largest deviation are those that charaterize the high change group).
 6. the function should output this

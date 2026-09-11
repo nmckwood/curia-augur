@@ -20,7 +20,6 @@ directly (as the local runner does).
 1. Builds the feature matrix from the **16 rank+decile deltas** and z-score normalizes it.
 2. Runs KMeans for `k` in `K_RANGE` (2..14) and picks the best `k` by silhouette score.
 3. Computes per-cluster mean/median `change_factor`, flags the high-change cluster, runs a
-   Kruskal-Wallis test across clusters, and ranks feature importance.
 3a. Treats the clustering as a prediction: every authority in the high-change cluster gets
    `change_factor_cluster = 1`, all others 0. Each cluster is then scored on the percentage of
    its councils that call matched (`accuracy`) and ranked (`accuracy_rank`); the all-council
@@ -29,7 +28,7 @@ directly (as the local runner does).
 5. Validates against the analysis schema.
 
 ## Output (bucket prefix `analysis/`)
-`analysis/analysis-<key>.json` — `meta`, `clusters`, `significance_test`, `feature_importance`,
+`analysis/analysis-<key>.json` — `meta`, `clusters`, `feature_importance`,
 and `constituencies` (each with `pca_x/pca_y`). Writing this triggers the `prediction` service.
 
 ## Environment

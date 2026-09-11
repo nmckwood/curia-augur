@@ -54,7 +54,6 @@ RANK_DELTA_KEYS = [rank_field(d) + DELTA_SUFFIX for d in DOMAINS]
 
 # KMeans feature set. REQ ML-4 said "decile delta only", but at LAD-mean level the
 # decile deltas round to mostly 0 and carry almost no signal, so clustering collapsed to
-# k=2 with a non-significant Kruskal-Wallis. Per the user's decision we cluster on the
 # full 16 rank+decile deltas instead: the rank deltas are continuous (0..~30k) and carry
 # the real signal, while z-score normalization puts every feature on a comparable scale.
 ML_FEATURE_KEYS = list(DEPRIVATION_DELTA_KEYS)

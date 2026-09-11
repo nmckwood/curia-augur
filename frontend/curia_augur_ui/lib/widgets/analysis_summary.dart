@@ -51,9 +51,8 @@ class AnalysisSummary extends StatelessWidget {
                   'A plain-English readout of this analysis: how many groups '
                   'k-means found, how often the majority party flipped inside '
                   'the high-change group versus the rest, whether that gap is '
-                  'statistically significant (Kruskal-Wallis p below 0.05), and '
-                  'which deprivation indices most set the high-change group '
-                  'apart.',
+                  'significant based on which deprivation indices most set '
+                  'apart the high-change group .',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 6),

@@ -89,16 +89,6 @@ def run(event):
     # mark the cluster which has the highest change likelyhood
     high_change_id = stats.mark_high_change_cluster(summaries)
 
-    # while k-means might have created many distinct clusters we need to now understand 
-    # if those clusters are significant and align with the change factor found in the
-    # data ingestion pipeline, EG does most of cluster a share a common change factor
-    # and does most of cluster b share a distinct common change factor? if not k-means
-    # has not added value (but may have answered the project question in that there
-    # is no significant of deprication data in predicting change).
-    # to achieve this we apply Kruskal-Wallis which groups change_factor by Kmeans
-    # cluster TODO Kruskal Wallis might not be best here as is is binary 1-0 change factor
-    # significance = stats.significance_test(labels, change_factors)
-
     # for each deprication indices use its standard deviation in the high change cluster
     # to compare it against its mean value in other clusters then rank the features, returning
     # a ranked list of most important deprivation indices

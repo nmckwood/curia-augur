@@ -1,13 +1,11 @@
-"""Cluster statistics: per-cluster change_factor, Kruskal-Wallis, feature importance.
+"""Cluster statistics: per-cluster change_factor, feature importance.
 
-Implements REQ ML-4 (mean change_factor per cluster, Kruskal-Wallis significance),
 REQ ML-5 (which deprivation indices characterize the high-change cluster - the features
 with the largest deviation of the high-change cluster mean from the other clusters) and
 REQUIREMENTS_4 (score each cluster's implied prediction against the actual outcome).
 """
 
 import numpy as np
-from scipy.stats import kruskal
 
 from curia_core.common.schemas import ML_FEATURE_KEYS
 

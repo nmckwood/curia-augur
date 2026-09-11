@@ -1,5 +1,5 @@
 """Tests for curia_core.ml.stats — per-cluster change_factor summaries, the high-change
-flag, Kruskal-Wallis significance, feature importance, and the REQUIREMENTS_4 scoring of
+flag, feature importance, and the REQUIREMENTS_4 scoring of
 each cluster's implied prediction."""
 
 import numpy as np
