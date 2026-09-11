@@ -97,7 +97,7 @@ def run(event):
     # is no significant of deprication data in predicting change).
     # to achieve this we apply Kruskal-Wallis which groups change_factor by Kmeans
     # cluster TODO Kruskal Wallis might not be best here as is is binary 1-0 change factor
-    significance = stats.significance_test(labels, change_factors)
+    # significance = stats.significance_test(labels, change_factors)
 
     # for each deprication indices use its standard deviation in the high change cluster
     # to compare it against its mean value in other clusters then rank the features, returning
@@ -141,7 +141,7 @@ def run(event):
             "degenerate_features": degenerate_features,
         },
         "clusters": summaries,
-        "significance_test": significance,
+        # "significance_test": significance,
         "feature_importance": importance,
         "constituencies": constituencies,
     }
@@ -156,6 +156,6 @@ def run(event):
         "analysis_key": analysis_key,
         "location": location,
         "k": int(best_k),
-        "significant": significance["significant"],
+        # "significant": significance["significant"],
         "n_constituencies": len(entries),
     }

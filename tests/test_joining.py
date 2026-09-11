@@ -111,18 +111,3 @@ def test_two_councils_may_map_to_the_same_lad():
         "Norfolk County Council": "Norfolk",
         "Norfolk Council": "Norfolk",
     }
-
-
-def test_score_falls_back_to_difflib_without_rapidfuzz(monkeypatch):
-    """rapidfuzz is optional; local runs without it must still join names."""
-    real_import = __builtins__["__import__"] if isinstance(__builtins__, dict) else __import__
-
-    def fake_import(name, *args, **kwargs):
-        if name == "rapidfuzz":
-            raise ImportError("rapidfuzz not installed")
-        return real_import(name, *args, **kwargs)
-
-    monkeypatch.setattr("builtins.__import__", fake_import)
-
-    assert joining._score("norfolk", "norfolk") == pytest.approx(100.0)
-    assert joining._score("norfolk", "suffolk") < 100.0

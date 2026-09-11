@@ -221,17 +221,6 @@ def ml_output_schema():
                     "additionalProperties": False,
                 },
             },
-            "significance_test": {
-                "type": "object",
-                "properties": {
-                    "test": {"type": "string", "enum": ["kruskal-wallis"]},
-                    "statistic": {"type": "number"},
-                    "p_value": {"type": "number"},
-                    "significant": {"type": "boolean"},
-                },
-                "required": ["statistic", "p_value", "significant"],
-                "additionalProperties": False,
-            },
             "feature_importance": {
                 "type": "array",
                 "items": {

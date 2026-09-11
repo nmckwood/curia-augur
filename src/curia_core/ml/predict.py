@@ -16,9 +16,12 @@ Validity notes:
 """
 
 import json
-
+import numpy as np
 from curia_core.common import io
 from curia_core.common.schemas import ML_FEATURE_KEYS
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
 
 # training data, 70% will be for training and 30% for verification
 TEST_SIZE = 0.3
@@ -49,7 +52,6 @@ def common_indices(top_lists):
 def _build_matrix(analysis, ingestion_entries):
     """Return (constituencies, X16, y): the full 16-delta feature matrix (aligned to the
     analysis constituencies by LAD name) and the actual change_factor targets."""
-    import numpy as np
 
     deltas_by_lad = {
         e["Local Authority District name"]: e["deprivation"] for e in ingestion_entries
@@ -75,16 +77,12 @@ def _split(targets):
     Degenerate cases (fewer than 4 rows, a single class, or a class with <2 members) can't
     be held out cleanly, so both indices span all rows and accuracy is in-sample.
     """
-    import numpy as np
-
     n = len(targets)
     idx = np.arange(n)
     classes = sorted(set(targets.tolist()))
     counts = [int((targets == c).sum()) for c in classes]
     if n < 4 or len(classes) < 2 or min(counts) < 2:
         return idx, idx
-
-    from sklearn.model_selection import train_test_split
 
     return train_test_split(
         idx, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=targets
@@ -96,14 +94,9 @@ def _rank_indices_by_coef(matrix, targets, train_idx, k):
 
     Falls back to the first k feature names if the train split has a single class.
     """
-    import numpy as np
-
     train_targets = targets[train_idx]
     if len(set(train_targets.tolist())) < 2:
         return list(ML_FEATURE_KEYS[:k])
-
-    from sklearn.linear_model import LogisticRegression
-    from sklearn.preprocessing import StandardScaler
 
     scaler = StandardScaler().fit(matrix[train_idx])
     model = LogisticRegression(max_iter=1000).fit(
@@ -118,15 +111,11 @@ def _fit_eval(matrix, targets, train_idx, test_idx):
 
     Returns (predictions, metrics). Single-class train split -> majority-class prediction.
     """
-    import numpy as np
-
     train_targets = targets[train_idx]
     if len(set(train_targets.tolist())) < 2:
         only = int(train_targets[0]) if len(train_targets) else 0
         preds = np.full(len(targets), only, dtype=int)
     else:
-        from sklearn.linear_model import LogisticRegression
-        from sklearn.preprocessing import StandardScaler
 
         scaler = StandardScaler().fit(matrix[train_idx])
         scaled = scaler.transform(matrix)
@@ -151,8 +140,6 @@ def _majority_baseline(targets, train_idx, test_idx):
     regression model's held-out score, and ``all_accuracy`` against the cluster prediction,
     which is scored over every authority.
     """
-    import numpy as np
-
     train_targets = targets[train_idx]
     if len(train_targets) == 0:
         return {

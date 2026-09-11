@@ -93,7 +93,6 @@ Map<String, dynamic> analysisJson({
   List<Map<String, dynamic>>? constituencies,
   List<Map<String, dynamic>>? clusters,
   Map<String, dynamic>? prediction,
-  bool significant = false,
   double pValue = 0.42,
   List<String> keyIndices = const ['Income Rank delta'],
 }) => {
@@ -105,7 +104,6 @@ Map<String, dynamic> analysisJson({
     if (prediction != null) 'prediction': prediction,
   },
   'clusters': clusters ?? [clusterJson()],
-  'significance_test': {'p_value': pValue, 'significant': significant},
   'feature_importance': const [
     {'feature': 'Income Rank delta', 'deviation_score': 0.9, 'rank': 1},
     {'feature': 'Crime Rank delta', 'deviation_score': 0.3, 'rank': 2},

@@ -6,6 +6,7 @@ Pure functions returning lists of plain dicts, so the same code runs locally and
 import csv
 import json
 import os
+import pandas as pd
 
 from curia_core.common.schemas import LAD_NAME_PREFIX
 
@@ -37,7 +38,6 @@ def _read_csv(path):
 
 
 def _read_xlsx(path):
-    import pandas as pd  # lazy: only needed for spreadsheet inputs
 
     frame = pd.read_excel(path)
     return json.loads(frame.to_json(orient="records"))

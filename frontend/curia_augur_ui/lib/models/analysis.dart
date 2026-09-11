@@ -37,8 +37,6 @@ class Constituency {
   final String council;
   final int clusterId;
   final int changeFactor; // 1 = majority party flipped, 0 = unchanged
-  /// The k-means clustering's own call: 1 when this authority sits in the
-  /// high-change cluster, else 0 (REQUIREMENTS_4).
   final int changeFactorCluster;
   final Map<String, int> deciles;
   final double pcaX;
@@ -180,7 +178,6 @@ class PredictionMeta {
   final int testSize;
   final double
   baselineAccuracy; // majority-class held-out accuracy (the bar to beat)
-  /// The most common change_factor on the train split — what you would pick with no ML.
   final int baselineMajorityClass;
 
   /// That same guess scored over every authority (comparable to the cluster pie).
@@ -225,8 +222,6 @@ class Analysis {
     required this.constituencies,
     required this.featureImportance,
     required this.clusters,
-    required this.significant,
-    required this.pValue,
     required this.keyIndices,
     required this.prediction,
   });
@@ -235,17 +230,12 @@ class Analysis {
   final List<Constituency> constituencies;
   final List<FeatureImportance> featureImportance;
   final List<ClusterSummary> clusters;
-  final bool significant;
-  final double pValue;
   final List<String>
   keyIndices; // REQUIREMENTS_3 common indices used for prediction
   final PredictionMeta? prediction;
 
   factory Analysis.fromJson(Map<String, dynamic> json) {
     final meta = json['meta'] as Map<String, dynamic>;
-    final sig =
-        (json['significance_test'] ?? <String, dynamic>{})
-            as Map<String, dynamic>;
     return Analysis(
       prediction: meta['prediction'] == null
           ? null
@@ -263,8 +253,6 @@ class Analysis {
       clusters: ((json['clusters'] ?? []) as List)
           .map((e) => ClusterSummary.fromJson(e as Map<String, dynamic>))
           .toList(),
-      significant: (sig['significant'] ?? false) as bool,
-      pValue: ((sig['p_value'] ?? 1) as num).toDouble(),
     );
   }
 

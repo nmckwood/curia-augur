@@ -95,25 +95,6 @@ def score_clusters(summaries, labels, change_factors, high_change_cluster_id):
         "n_total": int(total),
     }
 
-
-def significance_test(labels, change_factors):
-    """Kruskal-Wallis across clusters' change_factor distributions."""
-    change_factors = np.asarray(change_factors, dtype=float)
-    groups = [
-        change_factors[labels == c] for c in sorted(set(int(x) for x in labels))
-    ]
-    groups = [g for g in groups if len(g) > 0]
-    if len(groups) < 2:
-        return {"test": "kruskal-wallis", "statistic": 0.0, "p_value": 1.0, "significant": False}
-    statistic, p_value = kruskal(*groups)
-    return {
-        "test": "kruskal-wallis",
-        "statistic": float(statistic),
-        "p_value": float(p_value),
-        "significant": bool(p_value < ALPHA),
-    }
-
-
 def feature_importance(labels, normalized_matrix, high_change_cluster_id):
     """Rank features by |high-change cluster mean - other clusters mean| (REQ ML-5)."""
     high_mask = labels == high_change_cluster_id

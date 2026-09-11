@@ -38,9 +38,6 @@ class AnalysisSummary extends StatelessWidget {
         : (high.meanChangeFactor * 100).toStringAsFixed(0);
     final otherFlipPct = (otherFlip * 100).toStringAsFixed(0);
 
-    final significance = analysis.significant
-        ? 'statistically significant'
-        : 'not statistically significant';
 
     return Card(
       child: Padding(
@@ -65,9 +62,7 @@ class AnalysisSummary extends StatelessWidget {
               '${analysis.clusters.length} clusters using the deprivation change indices. '
               '${high == null ? '' : 'The high-change cluster contains ${high.size} authorities, '
                         'where the majority party flipped in $highFlipPct% of them, versus '
-                        '$otherFlipPct% across the other clusters. '}'
-              'The difference in majority-flip rates between clusters is $significance '
-              '(Kruskal-Wallis p = ${analysis.pValue.toStringAsFixed(4)}).',
+                        '$otherFlipPct% across the other clusters. '}',
               style: const TextStyle(height: 1.4),
             ),
             const SizedBox(height: 8),

@@ -5,7 +5,7 @@ per-constituency display block keeps the 8 decile deltas (DECILE_DELTA_KEYS).
 """
 
 import numpy as np
-
+from sklearn.decomposition import PCA
 from curia_core.common.schemas import DECILE_DELTA_KEYS, ML_FEATURE_KEYS
 
 
@@ -79,7 +79,6 @@ def pca_2d(normalized):
     Returns an (n, 2) array. Used purely for the UI cluster scatter (REQUIREMENTS_2 UI-1),
     so clusters separate visually in 2D.
     """
-    from sklearn.decomposition import PCA
 
     n_components = min(2, normalized.shape[1], normalized.shape[0])
     coords = PCA(n_components=n_components, random_state=42).fit_transform(normalized)

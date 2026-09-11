@@ -189,18 +189,6 @@ void main() {
   });
 
   group('Analysis', () {
-    test('parses meta, clusters, significance and constituencies', () {
-      final a = sampleAnalysis();
-
-      expect(a.constituencies, hasLength(4));
-      expect(a.clusters, hasLength(2));
-      expect(a.featuresUsed, ['Income Rank delta', 'Crime Rank delta']);
-      expect(a.keyIndices, ['Income Rank delta']);
-      expect(a.significant, isFalse);
-      expect(a.pValue, closeTo(0.42, 1e-9));
-      expect(a.prediction, isNotNull);
-    });
-
     test('feature importance is sorted by rank regardless of input order', () {
       final json = analysisJson();
       json['feature_importance'] = [

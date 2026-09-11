@@ -7,6 +7,7 @@ Unmatched / ambiguous names are reported so the caller can write the unused log.
 """
 
 import re
+from rapidfuzz import fuzz
 
 _STOPWORDS = {
     "council",
@@ -34,15 +35,7 @@ def normalize_name(name):
 
 
 def _score(a, b):
-    try:
-        from rapidfuzz import fuzz
-
-        return fuzz.token_sort_ratio(a, b)
-    except ImportError:
-        from difflib import SequenceMatcher
-
-        return SequenceMatcher(None, a, b).ratio() * 100.0
-
+    return fuzz.token_sort_ratio(a, b)
 
 def match_councils_to_lads(councils, lad_names, threshold=MATCH_THRESHOLD):
     """Match each council to its best LAD name above ``threshold``.

@@ -25,14 +25,16 @@ DART_MIN_COVERAGE=70
 
 target="all"
 coverage=1
+png=0
 for arg in "$@"; do
   case "$arg" in
     python|py)      target="python" ;;
     dart|flutter)   target="dart" ;;
     all)            target="all" ;;
+    --png) png=1 ;;
     --no-coverage)  coverage=0 ;;
     -h|--help)      sed -n '2,17p' "${BASH_SOURCE[0]}"; exit 0 ;;
-    *) echo "unknown argument: $arg (expected python|dart|all|--no-coverage)" >&2; exit 2 ;;
+    *) echo "unknown argument: $arg (expected python|dart|all|--no-coverage|--png)" >&2; exit 2 ;;
   esac
 done
 
@@ -70,7 +72,15 @@ run_python() {
     args+=("--cov-fail-under=$PYTHON_MIN_COVERAGE")
   fi
 
-  ( cd "$REPO_ROOT" && "$python_bin" -m pytest "${args[@]}" )
+  if [[ "$png" -eq 1 && "$coverage" -eq 1 ]]; then
+    args+=("--cov-report=html:htmlcov")
+  fi
+
+  ( cd "$REPO_ROOT" && "$python_bin" -m pytest "${args[@]}" ) || return 1
+
+  if [[ "$png" -eq 1 && "$coverage" -eq 1 ]]; then
+    wkhtmltoimage --enable-local-file-access --load-error-handling ignore --width 1200 "$REPO_ROOT/htmlcov/index.html" "$REPO_ROOT/python_coverage.png"
+  fi
 }
 
 # --- Dart ---------------------------------------------------------------------
@@ -110,6 +120,11 @@ run_dart() {
 
   [[ "$coverage" -eq 1 ]] || return 0
   report_dart_coverage
+  if [[ "$png" -eq 1 ]]; then
+    local html_dir="$UI_DIR/coverage/html"
+    genhtml "$UI_DIR/coverage/lcov.info" -o "$html_dir" >/dev/null 2>&1
+    wkhtmltoimage --enable-local-file-access --load-error-handling ignore --width 1200 "$html_dir/index.html" "$REPO_ROOT/dart_coverage.png"
+  fi
 }
 
 # Summarise lcov.info per file and enforce the threshold. lcov/genhtml are not required.

@@ -34,30 +34,6 @@ void main() {
     );
   });
 
-  testWidgets('reports the significance verdict and p value', (tester) async {
-    await tester.pumpWidget(
-      harness(AnalysisSummary(analysis: sampleAnalysis()), height: 500),
-    );
-
-    expect(find.textContaining('not statistically significant'), findsOneWidget);
-    expect(find.textContaining('p = 0.4200'), findsOneWidget);
-  });
-
-  testWidgets('says so when the difference IS significant', (tester) async {
-    final analysis = Analysis.fromJson(
-      analysisJson(significant: true, pValue: 0.001, prediction: predictionJson()),
-    );
-
-    await tester.pumpWidget(harness(AnalysisSummary(analysis: analysis), height: 500));
-
-    final text = tester
-        .widgetList<Text>(find.byType(Text))
-        .map((t) => t.data ?? '')
-        .join(' ');
-    expect(text, contains('is statistically significant'));
-    expect(text, isNot(contains('not statistically significant')));
-  });
-
   testWidgets('scores the clustering as a prediction and ranks the clusters', (
     tester,
   ) async {

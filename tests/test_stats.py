@@ -68,42 +68,6 @@ def test_mark_high_change_flags_exactly_the_highest_mean_cluster():
 def test_mark_high_change_of_no_summaries_returns_none():
     assert stats.mark_high_change_cluster([]) is None
 
-
-# --- significance_test -------------------------------------------------------
-
-
-def test_significance_test_detects_a_real_difference():
-    labels = np.array([0] * 20 + [1] * 20)
-    changes = [0] * 20 + [1] * 20
-
-    result = stats.significance_test(labels, changes)
-
-    assert result["test"] == "kruskal-wallis"
-    assert result["p_value"] < stats.ALPHA
-    assert result["significant"] is True
-
-
-def test_significance_test_finds_nothing_when_clusters_are_alike():
-    labels = np.array([0] * 20 + [1] * 20)
-    changes = ([0, 1] * 10) + ([0, 1] * 10)
-
-    result = stats.significance_test(labels, changes)
-
-    assert result["p_value"] > stats.ALPHA
-    assert result["significant"] is False
-
-
-def test_significance_test_of_a_single_cluster_is_a_safe_non_result():
-    result = stats.significance_test(np.zeros(10, dtype=int), [1] * 10)
-
-    assert result == {
-        "test": "kruskal-wallis",
-        "statistic": 0.0,
-        "p_value": 1.0,
-        "significant": False,
-    }
-
-
 # --- feature_importance ------------------------------------------------------
 
 
