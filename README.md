@@ -268,9 +268,11 @@ See `docs/FLUTTER_WSL_SETUP.md` for WSL specifics.
 pip install -r requirements.txt
 
 # 1. Deploy the stack. Values shown are placeholders — supply your own.
+#    alert_email/budget_usd wire up a monthly budget alarm (cost tripwire).
 cdk deploy --all \
   --context account=<ACCOUNT_ID> --context region=<REGION> \
-  --context root_domain=<ROOT_DOMAIN>
+  --context root_domain=<ROOT_DOMAIN> \
+  --context alert_email=<ALERT_EMAIL> --context budget_usd=25
 
 # 2. Load real values from your local, git-ignored .secret file
 #    (retrieve CLIENT_ID / USER_POOL_ID / DISTRIBUTION_ID from the cfn output).

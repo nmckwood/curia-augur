@@ -20,6 +20,7 @@ from aws_cdk import (
     aws_route53 as route53,
     aws_route53_targets as targets,
     aws_logs as logs,
+    aws_budgets as budgets,
 )
 from constructs import Construct
 
@@ -193,7 +194,7 @@ class CuriaAugurStack(Stack):
                 allow_methods=["GET", "OPTIONS"],
                 allow_headers=apigw.Cors.DEFAULT_HEADERS,
             ),
-            deploy_options=apigw.StageOptions(throttling_rate_limit=20, throttling_burst_limit=10),
+            deploy_options=apigw.StageOptions(throttling_rate_limit=5, throttling_burst_limit=10),
         )
         authorizer = apigw.CognitoUserPoolsAuthorizer(
             self, "Authorizer", cognito_user_pools=[user_pool]
@@ -270,6 +271,49 @@ class CuriaAugurStack(Stack):
                 targets.CloudFrontTarget(distribution)
             ),
         )
+
+        alert_email = self.node.try_get_context("alert_email")
+        if alert_email:
+            budget_usd = float(self.node.try_get_context("budget_usd") or 25)
+            budgets.CfnBudget(
+                self,
+                "MonthlyBudget",
+                budget=budgets.CfnBudget.BudgetDataProperty(
+                    budget_type="COST",
+                    time_unit="MONTHLY",
+                    budget_limit=budgets.CfnBudget.SpendProperty(
+                        amount=budget_usd, unit="USD"
+                    ),
+                ),
+                notifications_with_subscribers=[
+                    budgets.CfnBudget.NotificationWithSubscribersProperty(
+                        notification=budgets.CfnBudget.NotificationProperty(
+                            comparison_operator="GREATER_THAN",
+                            threshold=80,
+                            threshold_type="PERCENTAGE",
+                            notification_type="ACTUAL",
+                        ),
+                        subscribers=[
+                            budgets.CfnBudget.SubscriberProperty(
+                                address=alert_email, subscription_type="EMAIL"
+                            )
+                        ],
+                    ),
+                    budgets.CfnBudget.NotificationWithSubscribersProperty(
+                        notification=budgets.CfnBudget.NotificationProperty(
+                            comparison_operator="GREATER_THAN",
+                            threshold=100,
+                            threshold_type="PERCENTAGE",
+                            notification_type="FORECASTED",
+                        ),
+                        subscribers=[
+                            budgets.CfnBudget.SubscriberProperty(
+                                address=alert_email, subscription_type="EMAIL"
+                            )
+                        ],
+                    ),
+                ],
+            )
 
         # --- Outputs ----------------------------------------------------------
         CfnOutput(self, "InputBucketName", value=input_bucket.bucket_name)
