@@ -1,0 +1,6 @@
+[PROMPT] make sure my files_api has cors headers for the UI
+
+[ANALYSIS] Found files_api with basic CORS. API Gateway has preflight. Enhancing Lambda CORS headers.
+
+[COMPLETION] Enhanced CORS headers in files_api/app.py with Allow-Methods and Allow-Headers
+

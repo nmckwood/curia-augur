@@ -1,0 +1,14 @@
+__pycache__
+.venv
+venv
+env
+.pytest_cache
+.dart_tool
+build
+android
+ios
+linux
+windows
+macos
+.idea
+.vscode
