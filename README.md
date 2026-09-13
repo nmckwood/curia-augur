@@ -280,12 +280,12 @@ set -a; source .secret; set +a
 
 # 3. Simplify the GeoJSON boundary files (paths relative to the repo root).
 python tools/simplify_geojson.py \
-  --input data/geospatial_data/Local_Authority_Districts_DEC_2025_Boundaries_UK_BFC.geojson \
+  --input /home/neils/curia-augur/data/geospatial_data/Local_Authority_Districts_DEC_2025_Boundaries_UK_BFC_5780731924739583250.geojson \
   --output frontend/curia_augur_ui/assets/geo/boundaries_2025.geojson \
   --tolerance 0.001 --precision 4 --min-ring-points 6
 
 python tools/simplify_geojson.py \
-  --input data/geospatial_data/Local_Authority_Districts_December_2022_UK_BFC_V2.geojson \
+  --input /home/neils/curia-augur/data/geospatial_data/Local_Authority_Districts_December_2022_UK_BFC_V2_-4534861255799681503.geojson \
   --output frontend/curia_augur_ui/assets/geo/boundaries_2022.geojson \
   --tolerance 0.001 --precision 4 --min-ring-points 6
 
@@ -326,6 +326,14 @@ for EMAIL in "${ADMIN_EMAIL}" "${ASSESSOR_EMAIL}"; do
     --password "${SEED_PASSWORD}" \
     --permanent
 done
+
+{
+  "deprivation_file_start": "2015_dep.json",
+  "deprivation_file_end":   "2019_dep.json",
+  "local_election_start":   "opencouncildata_councillors_2018.csv",
+  "local_election_end":     "opencouncildata_councillors_2022.csv"
+}
+
 ```
 
 ---
